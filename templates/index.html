@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Shop{% endblock %}
+
+{% block content %}
+
+<!-- ===== HERO ===== -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center py-5">
+            <div class="col-lg-7">
+                <span class="badge bg-success-subtle text-success px-3 py-2 mb-3 rounded-pill">
+                    <i class="bi bi-leaf me-1"></i> Carbon-Aware Shopping
+                </span>
+                <h1 class="hero-title mb-3">Shop Smarter.<br>Live <span class="text-gradient">Greener.</span></h1>
+                <p class="lead text-muted mb-4">Every product displays its real carbon footprint. Make informed,
+                    eco-conscious choices with AI-powered sustainability insights.</p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="#products" class="btn btn-eco btn-lg px-4">
+                        <i class="bi bi-shop me-2"></i>Browse Products
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-success btn-lg px-4">
+                        <i class="bi bi-bar-chart me-2"></i>Carbon Dashboard
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-5 d-none d-lg-flex justify-content-center mt-4 mt-lg-0">
+                <div class="hero-stats-card">
+                    <div class="stat-item">
+                        <i class="bi bi-tree-fill text-success fs-3"></i>
+                        <div>
+                            <div class="fw-bold">CO₂ Tracked</div>
+                            <div class="text-muted small">On every order</div>
+                        </div>
+                    </div>
+                    <div class="stat-item mt-3">
+                        <i class="bi bi-robot text-info fs-3"></i>
+                        <div>
+                            <div class="fw-bold">AI Classifier</div>
+                            <div class="text-muted small">Low / Medium / High</div>
+                        </div>
+                    </div>
+                    <div class="stat-item mt-3">
+                        <i class="bi bi-recycle text-warning fs-3"></i>
+                        <div>
+                            <div class="fw-bold">Eco Alternatives</div>
+                            <div class="text-muted small">Smart suggestions</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FILTERS ===== -->
+<section id="products" class="py-4 bg-light-subtle">
+    <div class="container">
+        <form method="GET" action="{{ url_for('index') }}" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-medium text-muted">Search Products</label>
+                <div class="input-group eco-input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="q" value="{{ search }}"
+                        placeholder="Search products…">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-medium text-muted">Category</label>
+                <select class="form-select" name="cat">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.category_id }}" {{ 'selected' if selected_cat==cat.category_id|string else ''
+                        }}>
+                        {{ cat.category_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-medium text-muted">Carbon Level</label>
+                <select class="form-select" name="carbon">
+                    <option value="">All Carbon Levels</option>
+                    <option value="low" {{ 'selected' if carbon_filter=='low' }}>🟢 Low</option>
+                    <option value="medium" {{ 'selected' if carbon_filter=='medium' }}>🟡 Medium</option>
+                    <option value="high" {{ 'selected' if carbon_filter=='high' }}>🔴 High</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-eco w-100">Filter</button>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- ===== PRODUCT GRID ===== -->
+<section class="py-5">
+    <div class="container">
+        {% if products %}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-semibold mb-0">
+                <i class="bi bi-grid me-2"></i>{{ products|length }} Products Found
+            </h5>
+        </div>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-4">
+            {% for p in products %}
+            {% set level = p.carbon_level or 'medium' %}
+            {% if level == 'low' %}
+            {% set badge_class = 'success' %}
+            {% set badge_icon = 'bi-check-circle-fill' %}
+            {% set badge_text = 'Low Carbon' %}
+            {% elif level == 'high' %}
+            {% set badge_class = 'danger' %}
+            {% set badge_icon = 'bi-exclamation-triangle-fill' %}
+            {% set badge_text = 'High Carbon' %}
+            {% else %}
+            {% set badge_class = 'warning' %}
+            {% set badge_icon = 'bi-dash-circle-fill' %}
+            {% set badge_text = 'Medium Carbon' %}
+            {% endif %}
+            <div class="col">
+                <div class="card product-card h-100 shadow-sm">
+                    <!-- Carbon badge -->
+                    <div class="product-carbon-badge badge bg-{{ badge_class }}">
+                        <i class="bi {{ badge_icon }} me-1"></i>{{ badge_text }}
+                    </div>
+                    <!-- Product body -->
+                    <div class="card-body d-flex flex-column p-3">
+                        <div class="product-category-tag mb-2">
+                            <span class="badge text-bg-secondary rounded-pill">
+                                {{ p.category_name or 'General' }}
+                            </span>
+                        </div>
+                        <h6 class="card-title fw-bold mb-1">{{ p.name }}</h6>
+                        <small class="text-muted mb-2 d-block">
+                            <i class="bi bi-person-badge me-1"></i>Sold by: {{ p.merchant_name or 'Eco Shop Official' }}
+                        </small>
+                        <p class="card-text text-muted small flex-grow-1 mb-2">
+                            {{ p.description[:90] }}{% if p.description|length > 90 %}…{% endif %}
+                        </p>
+                        <div class="carbon-meter mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small class="text-muted"><i class="bi bi-cloud-haze2 me-1"></i>Carbon / unit</small>
+                                <small class="fw-semibold text-{{ badge_class }}">
+                                    {{ "%.2f"|format(p.base_carbon_emission|float) }} kg CO₂e
+                                </small>
+                            </div>
+                            <div class="progress" style="height: 5px;">
+                                {% set pct = [((p.base_carbon_emission|float) / 400 * 100), 100]|min %}
+                                <div class="progress-bar bg-{{ badge_class }}" style="width: {{ pct }}%"></div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="product-price">₹{{ "%.2f"|format(p.price|float) }}</span>
+                            {% if session.user_id %}
+                            <form method="POST" action="{{ url_for('add_to_cart', product_id=p.product_id) }}"
+                                class="d-flex gap-1">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn btn-eco btn-sm px-3" {{ 'disabled' if p.stock==0 }}>
+                                    {% if p.stock == 0 %}
+                                    <i class="bi bi-x-circle me-1"></i>Out of Stock
+                                    {% else %}
+                                    <i class="bi bi-cart-plus me-1"></i>Add
+                                    {% endif %}
+                                </button>
+                            </form>
+                            {% else %}
+                            <a href="{{ url_for('login') }}" class="btn btn-outline-success btn-sm">
+                                Login to Buy
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% if p.stock <= 5 and p.stock> 0 %}
+                            <small class="text-danger mt-2"><i class="bi bi-exclamation-circle me-1"></i>Only {{ p.stock
+                                }} left!</small>
+                            {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-search display-1 text-muted"></i>
+            <h4 class="mt-3 text-muted">No products found</h4>
+            <a href="{{ url_for('index') }}" class="btn btn-eco mt-3">Clear Filters</a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

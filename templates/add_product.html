@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Add Product{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <h2 class="fw-bold mb-4"><i class="bi bi-plus-circle me-2 text-success"></i>Add New Product</h2>
+            <div class="card eco-card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ url_for('add_product') }}" id="addProductForm">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-medium">Product Name</label>
+                                <input type="text" class="form-control" name="name"
+                                    placeholder="e.g. Organic Cotton T-Shirt" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-medium">Description</label>
+                                <textarea class="form-control" name="description" rows="3"
+                                    placeholder="Describe the product – AI will use this to classify carbon level…"
+                                    required id="descInput"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Category</label>
+                                <select class="form-select" name="category_id" id="catSelect" required>
+                                    {% for c in categories %}
+                                    <option value="{{ c.category_id }}">{{ c.category_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Price (₹)</label>
+                                <div class="input-group eco-input-group">
+                                    <span class="input-group-text">₹</span>
+                                    <input type="number" step="0.01" min="0" class="form-control" name="price"
+                                        id="priceInput" placeholder="0.00" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Stock Quantity</label>
+                                <input type="number" min="0" class="form-control" name="stock" placeholder="0" required>
+                            </div>
+
+                            <!-- AI Predict button -->
+                            <div class="col-12">
+                                <button type="button" class="btn btn-outline-info btn-sm" id="aiPredictBtn">
+                                    <i class="bi bi-robot me-2"></i>AI Predict Carbon Level
+                                </button>
+                                <div id="aiResult" class="mt-2"></div>
+                            </div>
+
+                            <div class="col-12 mt-3">
+                                <button type="submit" class="btn btn-eco w-100 py-2 fw-semibold">
+                                    <i class="bi bi-plus-lg me-2"></i>Add Product
+                                </button>
+                                <a href="{{ url_for('admin') }}" class="btn btn-outline-secondary w-100 mt-2">
+                                    Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById("aiPredictBtn").addEventListener("click", async function () {
+        const desc = document.getElementById("descInput").value.trim();
+        const cat = document.getElementById("catSelect").value;
+        const price = document.getElementById("priceInput").value || 0;
+        if (!desc) { alert("Please enter a description first."); return; }
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analyzing…';
+        try {
+            const res = await fetch("/ai-suggest", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    description: desc, category_id: parseInt(cat),
+                    price: parseFloat(price)
+                })
+            });
+            const data = await res.json();
+            const colors = { low: "success", medium: "warning", high: "danger" };
+            document.getElementById("aiResult").innerHTML = `
+            <div class="alert alert-${colors[data.label]} py-2 mb-0">
+                <strong><i class="bi bi-robot me-2"></i>AI Prediction:</strong>
+                <span class="badge bg-${colors[data.label]} ms-1">${data.badge_text}</span>
+                — ${data.suggestion}
+            </div>`;
+        } catch (e) {
+            document.getElementById("aiResult").innerHTML = `<div class="alert alert-danger py-2">AI service unavailable.</div>`;
+        } finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-robot me-2"></i>AI Predict Carbon Level';
+        }
+    });
+</script>
+{% endblock %}

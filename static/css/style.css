@@ -1,0 +1,350 @@
+/* ==========================================================================
+   EcoShop – Custom Stylesheet
+   ========================================================================== */
+
+/* ------------------------------------------------------------------ */
+/* 1. CSS Custom Properties (Design Tokens)                            */
+/* ------------------------------------------------------------------ */
+:root {
+    --eco-green:        #16a34a;
+    --eco-green-light:  #4ade80;
+    --eco-green-dark:   #14532d;
+    --eco-teal:         #0d9488;
+    --eco-bg:           #f0fdf4;
+    --eco-card-border:  rgba(22, 163, 74, 0.15);
+    --eco-shadow:       0 4px 24px rgba(22, 163, 74, 0.08);
+    --navbar-bg:        #0f2818;
+    --font-main:        'Inter', system-ui, -apple-system, sans-serif;
+    --radius-lg:        16px;
+    --radius-md:        10px;
+    --transition:       all 0.22s cubic-bezier(.4,0,.2,1);
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. Base                                                             */
+/* ------------------------------------------------------------------ */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    font-family: var(--font-main);
+    background-color: #fafafa;
+    color: #1a1a1a;
+    line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------ */
+/* 3. Navbar                                                           */
+/* ------------------------------------------------------------------ */
+.eco-navbar {
+    background: linear-gradient(135deg, #0a1f12 0%, #0f2d1c 60%, #1a3d28 100%);
+    border-bottom: 1px solid rgba(74, 222, 128, 0.12);
+    box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+    padding: 0.6rem 0;
+}
+
+.eco-navbar .navbar-brand {
+    font-size: 1.5rem;
+    letter-spacing: -0.3px;
+    color: #fff !important;
+}
+
+.eco-navbar .navbar-brand .bi-leaf-fill { color: var(--eco-green-light); }
+
+.eco-navbar .nav-link {
+    color: rgba(255,255,255,0.82) !important;
+    transition: var(--transition);
+    font-size: 0.92rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+}
+.eco-navbar .nav-link:hover { color: #fff !important; background: rgba(255,255,255,0.08); }
+
+.cart-link { font-size: 1.25rem; padding: 0.3rem 0.6rem !important; }
+
+.cart-badge {
+    position: absolute;
+    top: -2px;
+    right: -6px;
+    background: var(--eco-green);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 20px;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+.user-avatar {
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(135deg, var(--eco-green), var(--eco-teal));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.eco-dropdown {
+    border: 1px solid var(--eco-card-border);
+    box-shadow: var(--eco-shadow);
+    border-radius: var(--radius-md);
+}
+
+/* ------------------------------------------------------------------ */
+/* 4. Buttons                                                          */
+/* ------------------------------------------------------------------ */
+.btn-eco {
+    background: linear-gradient(135deg, var(--eco-green) 0%, #15803d 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: var(--transition);
+    box-shadow: 0 2px 8px rgba(22,163,74,0.25);
+}
+.btn-eco:hover {
+    background: linear-gradient(135deg, #15803d 0%, #14532d 100%);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(22,163,74,0.35);
+}
+.btn-eco:active { transform: translateY(0); }
+.btn-eco:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* ------------------------------------------------------------------ */
+/* 5. Hero Section                                                     */
+/* ------------------------------------------------------------------ */
+.hero-section {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #d1fae5 100%);
+    border-bottom: 1px solid rgba(22,163,74,0.12);
+    position: relative;
+    overflow: hidden;
+}
+.hero-section::before {
+    content: "";
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(74,222,128,0.18) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.hero-title {
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+}
+
+.text-gradient {
+    background: linear-gradient(135deg, var(--eco-green), var(--eco-teal));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-stats-card {
+    background: #fff;
+    border: 1px solid var(--eco-card-border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--eco-shadow);
+    min-width: 240px;
+}
+.stat-item { display: flex; align-items: center; gap: 1rem; }
+
+/* ------------------------------------------------------------------ */
+/* 6. Product Cards                                                    */
+/* ------------------------------------------------------------------ */
+.product-card {
+    border: 1px solid rgba(0,0,0,0.07);
+    border-radius: var(--radius-lg);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+.product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+    border-color: var(--eco-card-border);
+}
+
+.product-carbon-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 0.7rem;
+    padding: 4px 9px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.product-price {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--eco-green-dark);
+}
+
+.carbon-meter .progress { border-radius: 10px; overflow: hidden; }
+
+/* ------------------------------------------------------------------ */
+/* 7. Auth pages                                                       */
+/* ------------------------------------------------------------------ */
+.auth-bg {
+    background: linear-gradient(150deg, #f0fdf4, #dbeafe 60%, #f0fdf4);
+}
+
+.eco-icon-circle {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, var(--eco-green), var(--eco-teal));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.eco-link { color: var(--eco-green); text-decoration: none; }
+.eco-link:hover { color: var(--eco-green-dark); text-decoration: underline; }
+
+/* ------------------------------------------------------------------ */
+/* 8. Input Groups                                                     */
+/* ------------------------------------------------------------------ */
+.eco-input-group .input-group-text {
+    background: var(--eco-bg);
+    border-color: #d1d5db;
+    color: var(--eco-green);
+}
+.eco-input-group .form-control:focus,
+.eco-input-group .form-select:focus {
+    border-color: var(--eco-green);
+    box-shadow: 0 0 0 3px rgba(22,163,74,0.12);
+}
+
+/* ------------------------------------------------------------------ */
+/* 9. Cards                                                            */
+/* ------------------------------------------------------------------ */
+.eco-card {
+    border: 1px solid var(--eco-card-border);
+    border-radius: var(--radius-lg);
+}
+.eco-card-header, .table-eco-header {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border-bottom: 1px solid var(--eco-card-border);
+}
+.eco-card-header { padding: 0.9rem 1.25rem; }
+
+/* ------------------------------------------------------------------ */
+/* 10. Cart / Order styles                                             */
+/* ------------------------------------------------------------------ */
+.eco-alert-carbon { border-radius: var(--radius-md); }
+
+.carbon-summary-box {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border: 1px solid var(--eco-card-border);
+}
+
+.qty-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+}
+
+/* ------------------------------------------------------------------ */
+/* 11. Dashboard Stat Cards                                            */
+/* ------------------------------------------------------------------ */
+.stat-card {
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition);
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+.stat-card::after {
+    content: "";
+    position: absolute;
+    bottom: -20px; right: -20px;
+    width: 100px; height: 100px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+}
+.stat-card-green  { background: linear-gradient(135deg, #16a34a, #0d9488); }
+.stat-card-blue   { background: linear-gradient(135deg, #2563eb, #7c3aed); }
+.stat-card-yellow { background: linear-gradient(135deg, #d97706, #f59e0b); }
+.stat-card-purple { background: linear-gradient(135deg, #7c3aed, #db2777); }
+
+.stat-icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.9; }
+.stat-value { font-size: 1.75rem; font-weight: 800; line-height: 1; }
+.stat-label { font-size: 0.78rem; opacity: 0.85; margin-top: 0.35rem; }
+
+/* ------------------------------------------------------------------ */
+/* 12. Accordion                                                       */
+/* ------------------------------------------------------------------ */
+.eco-accordion-item {
+    border: 1px solid var(--eco-card-border) !important;
+    border-radius: var(--radius-md) !important;
+    overflow: hidden;
+}
+.eco-accordion-btn {
+    background: linear-gradient(135deg, #f0fdf4, #fff) !important;
+    font-weight: 600;
+    color: #1a1a1a !important;
+}
+.eco-accordion-btn:not(.collapsed) {
+    background: linear-gradient(135deg, #dcfce7, #f0fdf4) !important;
+    color: var(--eco-green-dark) !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* 13. Tabs (Admin)                                                    */
+/* ------------------------------------------------------------------ */
+.eco-tabs .nav-link {
+    color: #555;
+    border-radius: 8px 8px 0 0;
+    font-weight: 500;
+}
+.eco-tabs .nav-link.active {
+    color: var(--eco-green-dark);
+    font-weight: 700;
+    border-color: var(--eco-card-border) var(--eco-card-border) #fff;
+}
+
+/* ------------------------------------------------------------------ */
+/* 14. Flash Alerts                                                    */
+/* ------------------------------------------------------------------ */
+.eco-alert { border-radius: var(--radius-md); border-left: 4px solid; }
+.eco-alert.alert-success { border-left-color: var(--eco-green); }
+.eco-alert.alert-danger  { border-left-color: #dc2626; }
+.eco-alert.alert-warning { border-left-color: #d97706; }
+.eco-alert.alert-info    { border-left-color: #0284c7; }
+
+/* ------------------------------------------------------------------ */
+/* 15. Footer                                                          */
+/* ------------------------------------------------------------------ */
+.eco-footer {
+    background: #0f2d1c;
+    color: #9ca3af;
+    border-top: 1px solid rgba(74,222,128,0.1);
+}
+
+/* ------------------------------------------------------------------ */
+/* 16. Badge colors                                                    */
+/* ------------------------------------------------------------------ */
+.text-success-light { color: var(--eco-green-light) !important; }
+.bg-light-subtle    { background-color: #f9fafb !important; }
+.bg-success-subtle  { background-color: #dcfce7 !important; }

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Merchant Sign Up{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h2 class="fw-bold mb-4 text-center"><i class="bi bi-shop me-2 text-success"></i>Become a Merchant</h2>
+            <div class="card eco-card shadow-sm p-4">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Business Name</label>
+                        <input type="text" class="form-control" name="name" required
+                            placeholder="e.g. Green Earth Collective">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Business Email</label>
+                        <input type="email" class="form-control" name="email" required
+                            placeholder="contact@greenearth.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Password</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Warehouse / Dispatch City</label>
+                        <input type="text" class="form-control" name="warehouse" required
+                            placeholder="e.g. Mumbai, Delhi, Bangalore">
+                        <div class="form-text"><i class="bi bi-info-circle me-1 text-primary"></i>Used to dynamically
+                            calculate shipping carbon footprint.</div>
+                    </div>
+                    <button type="submit" class="btn btn-eco w-100 py-2 fw-semibold"><i
+                            class="bi bi-person-plus-fill me-2"></i>Register Business</button>
+                </form>
+                <hr class="my-4">
+                <div class="text-center">
+                    <p class="text-muted small mb-0">Already a merchant?</p>
+                    <a href="{{ url_for('merchant_login') }}" class="text-success fw-bold text-decoration-none">Log in
+                        here</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

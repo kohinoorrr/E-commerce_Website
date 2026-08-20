@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0"><i class="bi bi-shield-check me-2 text-warning"></i>Admin Panel</h2>
+        <a href="{{ url_for('add_product') }}" class="btn btn-eco">
+            <i class="bi bi-plus-circle me-2"></i>Add New Product
+        </a>
+    </div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs eco-tabs mb-4" id="adminTabs">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#productsTab">
+                <i class="bi bi-box-seam me-1"></i>Products
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#ordersTab">
+                <i class="bi bi-receipt me-1"></i>Orders
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#categoryTab">
+                <i class="bi bi-tags me-1"></i>Add Category
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#usersTab">
+                <i class="bi bi-people me-1"></i>Users
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+
+        <!-- PRODUCTS TAB -->
+        <div class="tab-pane fade show active" id="productsTab">
+            <div class="card eco-card shadow-sm">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-eco-header">
+                                <tr>
+                                    <th class="ps-3">#</th>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th class="text-end">Price</th>
+                                    <th class="text-center">Stock</th>
+                                    <th class="text-center">CO₂e / unit</th>
+                                    <th class="text-center">AI Level</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in products %}
+                                {% if p.stock == 0 %}
+                                {% set scls = 'text-danger fw-bold' %}
+                                {% elif p.stock <= 5 %} {% set scls='text-warning fw-bold' %} {% else %} {% set scls=''
+                                    %} {% endif %} <tr>
+                                    <td class="ps-3 text-muted">{{ p.product_id }}</td>
+                                    <td>
+                                        <div class="fw-semibold">{{ p.name }}</div>
+                                        <div class="text-muted small">{{ p.description[:60] }}…</div>
+                                    </td>
+                                    <td><span class="badge text-bg-secondary">{{ p.category_name }}</span></td>
+                                    <td class="text-end fw-semibold">₹{{ "%.2f"|format(p.price|float) }}</td>
+                                    <td class="text-center">
+                                        <span class="{{ scls }}">
+                                            {{ p.stock }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if p.status == 'scanning' %}
+                                        <span class="placeholder col-8"></span>
+                                        {% else %}
+                                        {{ "%.2f"|format(p.base_carbon_emission|float) }} kg
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if p.status == 'scanning' %}
+                                        <span class="badge bg-secondary text-light placeholder-glow"><i
+                                                class="bi bi-robot me-1 placeholder"></i>Scanning AI...</span>
+                                        {% else %}
+                                        {% if p.carbon_level == 'low' %}
+                                        <span class="badge bg-success">Low</span>
+                                        {% elif p.carbon_level == 'high' %}
+                                        <span class="badge bg-danger">High</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Medium</span>
+                                        {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <form method="POST"
+                                            action="{{ url_for('delete_product', product_id=p.product_id) }}"
+                                            onsubmit="return confirm('Delete {{ p.name }}?')">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                    </tr>
+                                    {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ORDERS TAB -->
+        <div class="tab-pane fade" id="ordersTab">
+            <div class="card eco-card shadow-sm">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-eco-header">
+                                <tr>
+                                    <th class="ps-3">Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Date</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="text-end">CO₂e Total</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for o in orders %}
+                                {% set c = o.total_carbon|float %}
+                                {% if c < 5 %} {% set ctxt='text-success fw-semibold' %} {% elif c < 30 %} {% set
+                                    ctxt='text-warning fw-semibold' %} {% else %} {% set ctxt='text-danger fw-semibold'
+                                    %} {% endif %} <tr>
+                                    <td class="ps-3 fw-semibold">#{{ o.order_id }}</td>
+                                    <td>{{ o.user_name }}</td>
+                                    <td class="text-muted small">
+                                        {{ o.order_date.strftime('%d %b %Y %H:%M') if o.order_date else 'N/A' }}
+                                    </td>
+                                    <td class="text-end fw-semibold">₹{{ "%.2f"|format(o.total_amount|float) }}</td>
+                                    <td class="text-end">
+                                        <span class="{{ ctxt }}">
+                                            {{ "%.2f"|format(c) }} kg
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success">{{ o.status|title }}</span>
+                                    </td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% if not orders %}
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">No orders yet.</td>
+                                    </tr>
+                                    {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADD CATEGORY TAB -->
+        <div class="tab-pane fade" id="categoryTab">
+            <div class="row justify-content-center">
+                <div class="col-md-5">
+                    <div class="card eco-card shadow-sm">
+                        <div class="card-body p-4">
+                            <h6 class="fw-bold mb-3"><i class="bi bi-tag-fill me-2 text-success"></i>Add New Category
+                            </h6>
+                            <form method="POST" action="{{ url_for('add_category') }}">
+                                <div class="mb-3">
+                                    <label class="form-label fw-medium">Category Name</label>
+                                    <div class="input-group eco-input-group">
+                                        <span class="input-group-text"><i class="bi bi-tags"></i></span>
+                                        <input type="text" class="form-control" name="category_name"
+                                            placeholder="e.g. Organic Food" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-eco w-100">
+                                    <i class="bi bi-plus-lg me-2"></i>Add Category
+                                </button>
+                            </form>
+                            <hr class="mt-4">
+                            <h6 class="fw-bold mb-2 text-muted">Existing Categories</h6>
+                            <ul class="list-group list-group-flush">
+                                {% for c in categories %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span>{{ c.category_name }}</span>
+                                    <span class="badge text-bg-secondary rounded-pill">ID {{ c.category_id }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- USERS TAB -->
+        <div class="tab-pane fade" id="usersTab">
+            <div class="card eco-card shadow-sm">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-eco-header">
+                                <tr>
+                                    <th class="ps-3">ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Location / Warehouse</th>
+                                    <th class="text-end pe-3">Joined</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in users %}
+                                <tr>
+                                    <td class="ps-3 text-muted">#{{ u.user_id }}</td>
+                                    <td class="fw-medium">{{ u.name }}</td>
+                                    <td>{{ u.email }}</td>
+                                    <td>
+                                        {% if u.is_admin %}
+                                        <span class="badge bg-danger">Admin</span>
+                                        {% elif u.is_merchant %}
+                                        <span class="badge bg-success">Merchant</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">User</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted small">{{ u.address or 'N/A' }}</td>
+                                    <td class="text-end pe-3 text-muted small">
+                                        {{ u.created_at.strftime('%d %b %Y') if u.created_at else 'N/A' }}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">No users found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

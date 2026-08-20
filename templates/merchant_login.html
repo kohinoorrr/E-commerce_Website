@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Merchant Login{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <h2 class="fw-bold mb-4 text-center"><i class="bi bi-shop-window me-2 text-success"></i>Merchant Login</h2>
+            <div class="card eco-card shadow-sm p-4">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Seller Email</label>
+                        <input type="email" class="form-control" name="email" required placeholder="seller@shop.com">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Password</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-eco w-100 py-2 fw-semibold"><i
+                            class="bi bi-box-arrow-in-right me-2"></i>Login as Merchant</button>
+                </form>
+                <hr class="my-4">
+                <div class="text-center">
+                    <p class="text-muted small mb-0">Want to sell eco-friendly products?</p>
+                    <a href="{{ url_for('merchant_signup') }}" class="text-success fw-bold text-decoration-none">Create
+                        a Merchant Account</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
