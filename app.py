@@ -24,19 +24,25 @@ app.secret_key = "eco_secret_key_change_in_prod"
 
 # ----------------------------------------------------------------
 # Database configuration  – update with your credentials
+# Supports local fallback and environment variables for cloud deployment
 # ----------------------------------------------------------------
+DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
+
 DB_CONFIG = {
-    "host":     "localhost",
-    "port":     5433,
-    "dbname":   "eco_ecommerce",
-    "user":     "postgres",      # ← change if needed
-    "password": "tiger", # ← change to your PG password
+    "host":     os.environ.get("DB_HOST", "localhost"),
+    "port":     int(os.environ.get("DB_PORT", 5433)),
+    "dbname":   os.environ.get("DB_NAME", "eco_ecommerce"),
+    "user":     os.environ.get("DB_USER", "postgres"),
+    "password": os.environ.get("DB_PASSWORD", "tiger"),
 }
 
 
 def get_db():
     """Return a new psycopg2 connection."""
+    if DATABASE_URL:
+        return psycopg2.connect(DATABASE_URL)
     return psycopg2.connect(**DB_CONFIG)
+
 
 
 def query(sql, params=None, fetchone=False, fetchall=False, commit=False):
