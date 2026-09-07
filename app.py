@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "ml"))
 import carbon_model
 
 app = Flask(__name__)
-app.secret_key = "eco_secret_key_change_in_prod"
+app.secret_key = os.environ.get("SECRET_KEY", "eco_secret_key_change_in_prod")
 
 # ----------------------------------------------------------------
 # Database configuration  – update with your credentials
