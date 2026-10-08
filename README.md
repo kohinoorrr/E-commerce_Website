@@ -1,6 +1,6 @@
-# EcoShop – E-Commerce Sustainability Management System
+# Vmart Supermart – Digital Marketing & E-Commerce Platform
 
-> A full-stack DBMS + AI academic project simulating an eco-friendly e-commerce platform with real-time carbon emission tracking and AI-powered product classification.
+> A full-stack Python Flask supermarket e-commerce web application tailored for **Digital Marketing** academic projects. Features zero-setup SQLite database, promotional coupon engine, price discount perception, customer loyalty points, and digital marketing analytics dashboard.
 
 ---
 
@@ -8,10 +8,10 @@
 
 | Layer | Technology |
 |---|---|
-| Frontend | HTML, CSS, Bootstrap 5, JavaScript |
-| Backend | Python Flask |
-| Database | PostgreSQL |
-| AI / ML | scikit-learn (RandomForestClassifier) |
+| Frontend | HTML5, CSS3, Bootstrap 5, JavaScript |
+| Backend | Python 3 Flask |
+| Database | SQLite3 (`vmart.db` - zero setup, auto-initialized) |
+| Analytics | Chart.js (Marketing Campaign Metrics) |
 
 ---
 
@@ -19,108 +19,43 @@
 
 ```
 DBMS_Project/
-├── app.py                  ← Flask backend (all routes)
-├── requirements.txt        ← Python dependencies
-│
-├── database/
-│   ├── schema.sql          ← PostgreSQL table definitions
-│   └── seed.sql            ← Sample data
-│
-├── ml/
-│   ├── carbon_model.py     ← AI classifier (train + predict)
-│   └── carbon_classifier.pkl  ← Saved model (auto-generated)
+├── app.py                  ← Flask backend (all routes & SQLite setup)
+├── vmart.db                ← Local SQLite database (auto-generated)
+├── requirements.txt        ← Lightweight dependencies (Flask, Gunicorn)
+├── Procfile                ← Deployment configuration
 │
 ├── templates/
-│   ├── base.html
-│   ├── index.html
-│   ├── login.html
-│   ├── signup.html
-│   ├── cart.html
-│   ├── checkout.html
-│   ├── orders.html
-│   ├── dashboard.html
-│   ├── admin.html
-│   └── add_product.html
+│   ├── base.html           ← Vmart branding & navbar
+│   ├── index.html          ← Supermarket catalog & promo banners
+│   ├── cart.html           ← Basket & coupon code validation
+│   ├── checkout.html       ← Shipping, payment & V-Points
+│   ├── orders.html         ← Order receipts & loyalty points
+│   ├── dashboard.html      ← Digital Marketing Analytics & Charts
+│   ├── admin.html          ← Inventory & Store Admin
+│   ├── add_product.html    ← Add supermarket item with discounts
+│   ├── login.html          ← User login
+│   └── signup.html         ← User signup
 │
 └── static/
-    ├── css/style.css
+    ├── css/style.css       ← Vmart Supermart styling
     └── js/main.js
 ```
 
 ---
 
-## ⚙️ Setup Instructions
+## ⚙️ Quick Start (Local Execution)
 
-### Step 1 – Software to Install
+1. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-| Software | Download |
-|---|---|
-| Python 3.10+ | https://python.org |
-| PostgreSQL 16+ | https://postgresql.org/download |
-| Git (optional) | https://git-scm.com |
-| VS Code | https://code.visualstudio.com |
+2. **Run the App**:
+   ```bash
+   python app.py
+   ```
 
-> During PostgreSQL install on Windows, note the **password** you set for the `postgres` user. You'll need it below.
-
----
-
-### Step 2 – Install Python Dependencies
-
-Open a terminal in the project folder and run:
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-### Step 3 – Set Up the Database
-
-1. Open **pgAdmin 4** (installed with PostgreSQL)
-2. Right-click **Databases** → **Create** → **Database** → name it `eco_ecommerce`
-3. Open a **Query Tool** for the new database
-4. Paste and run `database/schema.sql` (creates all tables)
-5. Paste and run `database/seed.sql` (inserts sample data)
-
----
-
-### Step 4 – Configure Database Password
-
-Open `app.py` and find `DB_CONFIG`:
-
-```python
-DB_CONFIG = {
-    "host":     "localhost",
-    "port":     5432,
-    "dbname":   "eco_ecommerce",
-    "user":     "postgres",
-    "password": "your_password",   ← change this
-}
-```
-
-Replace `"your_password"` with your PostgreSQL password.
-
----
-
-### Step 5 – Train the AI Model
-
-Run once to train the carbon classifier:
-
-```bash
-python ml/carbon_model.py
-```
-
-This saves `ml/carbon_classifier.pkl`.
-
----
-
-### Step 6 – Run the App
-
-```bash
-python app.py
-```
-
-Open your browser at: **http://127.0.0.1:5000**
+3. Open your browser at: **http://127.0.0.1:5000**
 
 ---
 
@@ -128,53 +63,15 @@ Open your browser at: **http://127.0.0.1:5000**
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | admin@eco.com | admin123 |
-| User | jane@eco.com | user123 |
+| **Admin** | `admin@vmart.com` | `admin123` |
+| **User** | `jane@vmart.com` | `user123` |
 
 ---
 
-## 🌿 Features
+## 🎯 Digital Marketing Features
 
-- **Product Browsing** with carbon badges (🟢 Low / 🟡 Medium / 🔴 High)
-- **Cart** with per-item and total carbon footprint
-- **AI Suggestion** – warns when cart carbon is high
-- **Checkout** with carbon acknowledgment
-- **Order History** with carbon per order
-- **Carbon Dashboard** with Chart.js analytics
-- **Admin Panel** – add products, categories, view orders
-- **AI Carbon Classifier** – Random Forest with TF-IDF on descriptions
-- **Live AI Predict** – test descriptions before adding products
-
----
-
-## 📐 Database Schema
-
-```
-Users ──────┐
-            ├── Cart ── Cart_Items ── Products ── Categories
-            └── Orders ── Order_Items
-```
-
-All tables are normalized to **3NF**. Carbon emission is computed dynamically:
-
-```sql
-SELECT SUM(P.base_carbon_emission * CI.quantity)
-FROM cart_items CI
-JOIN products P ON CI.product_id = P.product_id
-WHERE CI.cart_id = %s;
-```
-
----
-
-## 🤖 AI Component
-
-The `ml/carbon_model.py` module:
-- Trains a **RandomForestClassifier** (200 estimators)
-- Features: **TF-IDF** on product description + numeric (category, price, CO₂)
-- Labels: `low` | `medium` | `high`
-- Exposes `predict()` for Flask and `get_cart_suggestion()` for cart tips
-- Accuracy: ~85–95% on test split
-
----
-
-*DBMS + AI Academic Project · 2025*
+- **Promotional Coupon Engine**: Test coupon codes like `VMART20` (20% OFF) and `FRESH50` ($5 OFF on $25+).
+- **Psychological Pricing**: Displays original MRP alongside Vmart discounted sale price and savings percentage.
+- **Customer Loyalty Rewards**: Earn 1 V-Point for every $1 spent.
+- **Marketing Analytics Dashboard**: Real-time charts showing sales revenue by product category, customer savings, and coupon redemptions.
+- **Zero-Setup Database**: Uses built-in SQLite so no external database hosting or paid subscriptions are required.

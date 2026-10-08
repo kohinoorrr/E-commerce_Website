@@ -1,178 +1,166 @@
-{% extends "base.html" %}
-{% block title %}Carbon Dashboard{% endblock %}
+{% extends 'base.html' %}
+
+{% block title %}Digital Marketing Analytics Dashboard{% endblock %}
 
 {% block content %}
 <div class="container py-5">
-    <h2 class="fw-bold mb-1"><i class="bi bi-bar-chart-line me-2 text-success"></i>Carbon Analytics Dashboard</h2>
-    <p class="text-muted mb-5">Real-time sustainability metrics powered by your order data.</p>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-extrabold text-dark mb-1">
+                <i class="bi bi-graph-up-arrow text-primary me-2"></i>Digital Marketing Analytics
+            </h2>
+            <p class="text-muted small mb-0">Performance Metrics, Campaign ROI, Category Sales & Customer Engagement</p>
+        </div>
+        <span class="badge bg-danger fs-6 p-2"><i class="bi bi-bullseye me-1"></i> Vmart Marketing Campaign 2026</span>
+    </div>
 
-    <!-- ===== STAT CARDS ===== -->
+    <!-- Stat Cards -->
     <div class="row g-4 mb-5">
-        <div class="col-md-3 col-sm-6">
-            <div class="stat-card stat-card-green">
-                <div class="stat-icon"><i class="bi bi-cloud-haze2"></i></div>
-                <div class="stat-value">{{ "%.1f"|format((analytics.total_emissions_kg or 0)|float) }} kg</div>
-                <div class="stat-label">Total CO2 Emitted (All Orders)</div>
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-card stat-card-red shadow-sm">
+                <div class="stat-icon"><i class="bi bi-currency-dollar"></i></div>
+                <div class="stat-value">${{ "%.2f"|format(total_revenue) }}</div>
+                <div class="stat-label">Gross Store Revenue</div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="stat-card stat-card-blue">
-                <div class="stat-icon"><i class="bi bi-receipt"></i></div>
-                <div class="stat-value">{{ analytics.total_orders or 0 }}</div>
-                <div class="stat-label">Total Orders Placed</div>
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-card stat-card-blue shadow-sm">
+                <div class="stat-icon"><i class="bi bi-bag-check-fill"></i></div>
+                <div class="stat-value">{{ total_orders }}</div>
+                <div class="stat-label">Total Completed Orders</div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="stat-card stat-card-yellow">
-                <div class="stat-icon"><i class="bi bi-calculator"></i></div>
-                <div class="stat-value">{{ "%.1f"|format((analytics.avg_carbon_per_order or 0)|float) }} kg</div>
-                <div class="stat-label">Avg CO2 Per Order</div>
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-card stat-card-emerald shadow-sm">
+                <div class="stat-icon"><i class="bi bi-piggy-bank-fill"></i></div>
+                <div class="stat-value">${{ "%.2f"|format(total_customer_savings) }}</div>
+                <div class="stat-label">Customer Promo Savings</div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="stat-card stat-card-purple">
-                <div class="stat-icon"><i class="bi bi-person-heart"></i></div>
-                <div class="stat-value">{{ "%.1f"|format((user_footprint.my_total or 0)|float) }} kg</div>
-                <div class="stat-label">Your Personal Footprint</div>
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-card stat-card-amber shadow-sm">
+                <div class="stat-icon"><i class="bi bi-star-fill"></i></div>
+                <div class="stat-value">{{ total_loyalty_points }}</div>
+                <div class="stat-label">V-Points Loyalty Issued</div>
             </div>
         </div>
     </div>
 
-    <!-- ===== CHARTS ROW ===== -->
     <div class="row g-4 mb-5">
-        <div class="col-lg-6">
-            <div class="card eco-card shadow-sm h-100">
-                <div class="card-header eco-card-header">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart me-2"></i>Avg Carbon by Category (kg CO2e/unit)
-                    </h6>
-                </div>
-                <div class="card-body d-flex align-items-center justify-content-center">
-                    <canvas id="categoryChart" height="240"></canvas>
+        <!-- Sales by Category Chart -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">
+                    <i class="bi bi-pie-chart-fill text-danger me-2"></i>Sales Revenue by Category
+                </h5>
+                <div style="height: 300px; position: relative;">
+                    <canvas id="catSalesChart"></canvas>
                 </div>
             </div>
         </div>
-        <div class="col-lg-6">
-            <div class="card eco-card shadow-sm h-100">
-                <div class="card-header eco-card-header">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart me-2"></i>Green vs High-Emission Products</h6>
+
+        <!-- Marketing Strategy Case Study Info -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100 bg-white">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-3">
+                    <i class="bi bi-lightbulb-fill text-warning me-2"></i>Digital Marketing Strategy
+                </h5>
+
+                <div class="mb-3">
+                    <h6 class="fw-bold text-danger mb-1"><i class="bi bi-bullseye me-1"></i> Promotional Discounts</h6>
+                    <p class="small text-muted mb-0">High-converting coupon codes (e.g. <code>VMART20</code>) increase order value and decrease cart abandonment.</p>
                 </div>
-                <div class="card-body d-flex align-items-center justify-content-center">
-                    <canvas id="compareChart" height="240"></canvas>
+
+                <div class="mb-3">
+                    <h6 class="fw-bold text-primary mb-1"><i class="bi bi-arrow-repeat me-1"></i> Customer Retention Engine</h6>
+                    <p class="small text-muted mb-0">1 V-Point awarded per $1 spent incentivizes repeat purchases and builds brand loyalty.</p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="fw-bold text-success mb-1"><i class="bi bi-tags-fill me-1"></i> Psychological Pricing</h6>
+                    <p class="small text-muted mb-0">Showing original MRP alongside discounted sale price highlights value perception and boosts conversion rate.</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== TOP PRODUCTS TABLES ===== -->
-    <div class="row g-4">
-        <div class="col-md-6">
-            <div class="card eco-card shadow-sm">
-                <div class="card-header eco-card-header">
-                    <h6 class="mb-0 fw-bold text-success">
-                        <i class="bi bi-tree me-2"></i>Most Eco-Friendly Products
-                    </h6>
-                </div>
-                <div class="card-body p-0">
-                    <ul class="list-group list-group-flush">
-                        {% for p in top_green %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span class="small fw-medium">{{ p.name }}</span>
-                            <span class="badge bg-success rounded-pill">{{ "%.2f"|format(p.base_carbon_emission|float)
-                                }} kg</span>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card eco-card shadow-sm">
-                <div class="card-header eco-card-header">
-                    <h6 class="mb-0 fw-bold text-danger">
-                        <i class="bi bi-exclamation-triangle me-2"></i>Highest Emission Products
-                    </h6>
-                </div>
-                <div class="card-body p-0">
-                    <ul class="list-group list-group-flush">
-                        {% for p in top_high %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span class="small fw-medium">{{ p.name }}</span>
-                            <span class="badge bg-danger rounded-pill">{{ "%.2f"|format(p.base_carbon_emission|float) }}
-                                kg</span>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
+    <!-- Active Promo Coupons Table -->
+    <div class="card border-0 shadow-sm rounded-4 p-4">
+        <h5 class="fw-bold text-dark border-bottom pb-3 mb-3">
+            <i class="bi bi-ticket-perforated-fill text-warning me-2"></i>Active Promotional Campaigns
+        </h5>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Campaign Code</th>
+                        <th>Offer Type</th>
+                        <th>Min Order</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cp in coupons %}
+                    <tr>
+                        <td><span class="badge bg-dark fs-6 px-3 py-2 text-warning fw-bold">{{ cp.code }}</span></td>
+                        <td>
+                            {% if cp.discount_percent > 0 %}
+                            <span class="text-danger fw-bold">{{ cp.discount_percent }}% OFF</span>
+                            {% else %}
+                            <span class="text-success fw-bold">${{ "%.2f"|format(cp.flat_discount) }} OFF</span>
+                            {% endif %}
+                        </td>
+                        <td>${{ "%.2f"|format(cp.min_order) }}</td>
+                        <td class="small text-muted">{{ cp.description }}</td>
+                        <td><span class="badge bg-success">Active</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-
-</div>
-
-<!-- Data island: Jinja2 embeds chart data as JSON in data-attributes.
-     The script block below is pure JS with no Jinja2, eliminating linter errors. -->
-<div id="chartData" style="display:none"
-    data-cat-labels="{{ by_category | map(attribute='category_name') | list | tojson }}"
-    data-cat-values="{{ by_category | map(attribute='avg_carbon') | list | tojson }}"
-    data-green-labels="{{ top_green | map(attribute='name') | list | tojson }}"
-    data-green-values="{{ top_green | map(attribute='base_carbon_emission') | list | tojson }}"
-    data-high-labels="{{ top_high | map(attribute='name') | list | tojson }}"
-    data-high-values="{{ top_high | map(attribute='base_carbon_emission') | list | tojson }}">
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    var el = document.getElementById("chartData");
-    var catLabels = JSON.parse(el.dataset.catLabels || "[]");
-    var catData = JSON.parse(el.dataset.catValues || "[]");
-    var greenLabels = JSON.parse(el.dataset.greenLabels || "[]");
-    var greenVals = JSON.parse(el.dataset.greenValues || "[]");
-    var highLabels = JSON.parse(el.dataset.highLabels || "[]");
-    var highVals = JSON.parse(el.dataset.highValues || "[]");
+document.addEventListener("DOMContentLoaded", function() {
+    const ctx = document.getElementById('catSalesChart');
+    if (!ctx) return;
 
-    var catColors = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#14b8a6"];
+    const labels = [{% for c in cat_sales %}"{{ c.category_name }}",{% endfor %}];
+    const data = [{% for c in cat_sales %}{{ "%.2f"|format(c.category_revenue or 0.0) }},{% endfor %}];
 
-    new Chart(document.getElementById("categoryChart"), {
-        type: "doughnut",
+    new Chart(ctx, {
+        type: 'bar',
         data: {
-            labels: catLabels,
+            labels: labels.length ? labels : ["Fresh Produce", "Dairy & Bakery", "Snacks & Beverages", "Pantry", "Personal Care"],
             datasets: [{
-                data: catData,
-                backgroundColor: catColors.slice(0, catLabels.length),
-                borderWidth: 2,
-                borderColor: "#fff"
+                label: 'Revenue ($)',
+                data: data.length ? data : [120.50, 85.00, 64.20, 110.00, 45.00],
+                backgroundColor: [
+                    '#dc2626',
+                    '#2563eb',
+                    '#f59e0b',
+                    '#10b981',
+                    '#8b5cf6',
+                    '#ec4899'
+                ],
+                borderRadius: 8
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                legend: { position: "right", labels: { font: { size: 12 } } },
-                tooltip: { callbacks: { label: function (ctx) { return " " + ctx.parsed.toFixed(2) + " kg CO2e avg"; } } }
-            }
-        }
-    });
-
-    new Chart(document.getElementById("compareChart"), {
-        type: "bar",
-        data: {
-            labels: greenLabels.concat(highLabels),
-            datasets: [{
-                label: "Carbon (kg CO2e/unit)",
-                data: greenVals.concat(highVals),
-                backgroundColor: greenVals.map(function () { return "rgba(34,197,94,0.75)"; })
-                    .concat(highVals.map(function () { return "rgba(239,68,68,0.75)"; })),
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
+                legend: { display: false }
+            },
             scales: {
-                y: { beginAtZero: true, title: { display: true, text: "kg CO2e" } },
-                x: { ticks: { font: { size: 10 } } }
+                y: { beginAtZero: true }
             }
         }
     });
+});
 </script>
 {% endblock %}

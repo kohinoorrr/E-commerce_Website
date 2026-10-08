@@ -1,104 +1,66 @@
-{% extends "base.html" %}
-{% block title %}Add Product{% endblock %}
+{% extends 'base.html' %}
+
+{% block title %}Add Product | Vmart Supermart{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-7">
-            <h2 class="fw-bold mb-4"><i class="bi bi-plus-circle me-2 text-success"></i>Add New Product</h2>
-            <div class="card eco-card shadow-sm">
-                <div class="card-body p-4">
-                    <form method="POST" action="{{ url_for('add_product') }}" id="addProductForm">
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <label class="form-label fw-medium">Product Name</label>
-                                <input type="text" class="form-control" name="name"
-                                    placeholder="e.g. Organic Cotton T-Shirt" required>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label fw-medium">Description</label>
-                                <textarea class="form-control" name="description" rows="3"
-                                    placeholder="Describe the product – AI will use this to classify carbon level…"
-                                    required id="descInput"></textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-medium">Category</label>
-                                <select class="form-select" name="category_id" id="catSelect" required>
-                                    {% for c in categories %}
-                                    <option value="{{ c.category_id }}">{{ c.category_name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-medium">Price (₹)</label>
-                                <div class="input-group eco-input-group">
-                                    <span class="input-group-text">₹</span>
-                                    <input type="number" step="0.01" min="0" class="form-control" name="price"
-                                        id="priceInput" placeholder="0.00" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-medium">Stock Quantity</label>
-                                <input type="number" min="0" class="form-control" name="stock" placeholder="0" required>
-                            </div>
+<div class="container py-5" style="max-width: 650px;">
+    <div class="card border-0 shadow-lg rounded-4 p-4">
+        <h3 class="fw-bold text-dark border-bottom pb-3 mb-4"><i class="bi bi-plus-circle-fill text-danger me-2"></i>Add Supermarket Product</h3>
 
-                            <!-- AI Predict button -->
-                            <div class="col-12">
-                                <button type="button" class="btn btn-outline-info btn-sm" id="aiPredictBtn">
-                                    <i class="bi bi-robot me-2"></i>AI Predict Carbon Level
-                                </button>
-                                <div id="aiResult" class="mt-2"></div>
-                            </div>
+        <form method="POST" action="{{ url_for('add_product') }}">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Product Name</label>
+                <input type="text" name="name" class="form-control form-control-lg" placeholder="e.g. Organic Almond Milk (1L)" required>
+            </div>
 
-                            <div class="col-12 mt-3">
-                                <button type="submit" class="btn btn-eco w-100 py-2 fw-semibold">
-                                    <i class="bi bi-plus-lg me-2"></i>Add Product
-                                </button>
-                                <a href="{{ url_for('admin') }}" class="btn btn-outline-secondary w-100 mt-2">
-                                    Cancel
-                                </a>
-                            </div>
-                        </div>
-                    </form>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Description</label>
+                <textarea name="description" class="form-control" rows="2" placeholder="Brief product description..."></textarea>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Category</label>
+                    <select name="category_id" class="form-select form-select-lg" required>
+                        {% for cat in categories %}
+                        <option value="{{ cat.category_id }}">{{ cat.category_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Deal Tag</label>
+                    <select name="deal_tag" class="form-select form-select-lg">
+                        <option value="Hot Deal">Hot Deal</option>
+                        <option value="Best Seller">Best Seller</option>
+                        <option value="20% OFF">20% OFF</option>
+                        <option value="25% OFF">25% OFF</option>
+                        <option value="BOGO">BOGO (Buy 1 Get 1)</option>
+                        <option value="Super Saver">Super Saver</option>
+                        <option value="Fresh">Fresh</option>
+                    </select>
                 </div>
             </div>
-        </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">MRP ($)</label>
+                    <input type="number" step="0.01" name="mrp" class="form-control form-control-lg" placeholder="5.99" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Sale Price ($)</label>
+                    <input type="number" step="0.01" name="price" class="form-control form-control-lg" placeholder="4.49" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Stock Qty</label>
+                    <input type="number" name="stock" value="100" class="form-control form-control-lg" required>
+                </div>
+            </div>
+
+            <div class="d-flex gap-3">
+                <a href="{{ url_for('admin') }}" class="btn btn-outline-secondary btn-lg w-50">Cancel</a>
+                <button type="submit" class="btn btn-vmart btn-lg w-50 shadow">Add Product</button>
+            </div>
+        </form>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    document.getElementById("aiPredictBtn").addEventListener("click", async function () {
-        const desc = document.getElementById("descInput").value.trim();
-        const cat = document.getElementById("catSelect").value;
-        const price = document.getElementById("priceInput").value || 0;
-        if (!desc) { alert("Please enter a description first."); return; }
-        this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analyzing…';
-        try {
-            const res = await fetch("/ai-suggest", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    description: desc, category_id: parseInt(cat),
-                    price: parseFloat(price)
-                })
-            });
-            const data = await res.json();
-            const colors = { low: "success", medium: "warning", high: "danger" };
-            document.getElementById("aiResult").innerHTML = `
-            <div class="alert alert-${colors[data.label]} py-2 mb-0">
-                <strong><i class="bi bi-robot me-2"></i>AI Prediction:</strong>
-                <span class="badge bg-${colors[data.label]} ms-1">${data.badge_text}</span>
-                — ${data.suggestion}
-            </div>`;
-        } catch (e) {
-            document.getElementById("aiResult").innerHTML = `<div class="alert alert-danger py-2">AI service unavailable.</div>`;
-        } finally {
-            this.disabled = false;
-            this.innerHTML = '<i class="bi bi-robot me-2"></i>AI Predict Carbon Level';
-        }
-    });
-</script>
 {% endblock %}

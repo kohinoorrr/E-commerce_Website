@@ -1,790 +1,751 @@
 """
-app.py – E-Commerce Sustainability Management System
-======================================================
-Flask backend using psycopg2 (PostgreSQL).
+app.py – Vmart Supermart Application
+======================================
+Full-stack Python Flask web app backed by SQLite (zero external setup).
+Tailored for Digital Marketing & Supermarket Management.
 """
 
 import os
-import time
-import threading
-import psycopg2
-import psycopg2.extras
+import sqlite3
 from functools import wraps
 from flask import (Flask, render_template, request, redirect,
                    url_for, session, flash, jsonify)
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# Add ml/ to path so we can import carbon_model
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "ml"))
-import carbon_model
-
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "eco_secret_key_change_in_prod")
+app.secret_key = os.environ.get("SECRET_KEY", "vmart_supermart_secret_key_2026")
 
-# ----------------------------------------------------------------
-# Database configuration  – update with your credentials
-# Supports local fallback and environment variables for cloud deployment
-# ----------------------------------------------------------------
-DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
-
-DB_CONFIG = {
-    "host":     os.environ.get("DB_HOST", "localhost"),
-    "port":     int(os.environ.get("DB_PORT", 5433)),
-    "dbname":   os.environ.get("DB_NAME", "eco_ecommerce"),
-    "user":     os.environ.get("DB_USER", "postgres"),
-    "password": os.environ.get("DB_PASSWORD", "tiger"),
-}
+DB_PATH = os.path.join(os.path.dirname(__file__), "vmart.db")
 
 
 def get_db():
-    """Return a new psycopg2 connection."""
-    if DATABASE_URL:
-        return psycopg2.connect(DATABASE_URL)
-    return psycopg2.connect(**DB_CONFIG)
+    """Return a new sqlite3 connection with Row factory."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
-
-def query(sql, params=None, fetchone=False, fetchall=False, commit=False):
-    """Helper: execute a query and optionally fetch results."""
+def init_db():
+    """Initialize SQLite database with schema and default supermart seed data."""
     conn = get_db()
-    try:
-        with conn:
-            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute(sql, params or ())
-                if commit:
-                    conn.commit()
-                    return cur.rowcount
-                if fetchone:
-                    return cur.fetchone()
-                if fetchall:
-                    return cur.fetchall()
-    finally:
-        conn.close()
+    cur = conn.cursor()
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        is_admin INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS categories (
+        category_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_name TEXT NOT NULL UNIQUE,
+        icon_class TEXT DEFAULT 'bi-basket'
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS products (
+        product_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        category_id INTEGER REFERENCES categories(category_id),
+        mrp REAL NOT NULL,
+        price REAL NOT NULL,
+        stock INTEGER DEFAULT 100,
+        deal_tag TEXT DEFAULT 'Fresh',
+        rating REAL DEFAULT 4.5,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS cart (
+        cart_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER UNIQUE REFERENCES users(user_id) ON DELETE CASCADE,
+        coupon_code TEXT DEFAULT NULL,
+        discount_amount REAL DEFAULT 0.0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS cart_items (
+        cart_item_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cart_id INTEGER REFERENCES cart(cart_id) ON DELETE CASCADE,
+        product_id INTEGER REFERENCES products(product_id) ON DELETE CASCADE,
+        quantity INTEGER DEFAULT 1,
+        UNIQUE(cart_id, product_id)
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS orders (
+        order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+        total_mrp REAL NOT NULL,
+        total_price REAL NOT NULL,
+        discount_applied REAL DEFAULT 0.0,
+        final_amount REAL NOT NULL,
+        loyalty_points INTEGER DEFAULT 0,
+        shipping_address TEXT,
+        payment_method TEXT DEFAULT 'Cash on Delivery',
+        status TEXT DEFAULT 'Completed',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS order_items (
+        order_item_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id INTEGER REFERENCES orders(order_id) ON DELETE CASCADE,
+        product_id INTEGER REFERENCES products(product_id),
+        quantity INTEGER NOT NULL,
+        unit_price REAL NOT NULL
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS marketing_coupons (
+        coupon_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT UNIQUE NOT NULL,
+        discount_percent REAL DEFAULT 0,
+        flat_discount REAL DEFAULT 0,
+        min_order REAL DEFAULT 0,
+        description TEXT
+    );
+    """)
+
+    # Check if default data exists
+    cur.execute("SELECT COUNT(*) FROM users")
+    if cur.fetchone()[0] == 0:
+        # Seed users
+        admin_pass = generate_password_hash("admin123")
+        user_pass = generate_password_hash("user123")
+        cur.execute("INSERT INTO users (name, email, password_hash, is_admin) VALUES (?, ?, ?, 1)",
+                    ("Vmart Admin", "admin@vmart.com", admin_pass))
+        cur.execute("INSERT INTO users (name, email, password_hash, is_admin) VALUES (?, ?, ?, 0)",
+                    ("Jane Doe", "jane@vmart.com", user_pass))
+
+        # Seed categories
+        categories = [
+            ("Fresh Fruits & Veggies", "bi-apple"),
+            ("Dairy & Bakery", "bi-cup-hot"),
+            ("Snacks & Beverages", "bi-cup-straw"),
+            ("Pantry & Staples", "bi-box-seam"),
+            ("Personal Care", "bi-heart-pulse"),
+            ("Household Essentials", "bi-house-heart")
+        ]
+        cur.executemany("INSERT INTO categories (category_name, icon_class) VALUES (?, ?)", categories)
+
+        # Seed products
+        products = [
+            ("Fresh Organic Bananas (1 Dozen)", "Farm fresh sweet organic bananas rich in potassium.", 1, 3.50, 2.80, 150, "20% OFF", 4.8),
+            ("Farm Fresh Red Apples (1 kg)", "Crisp and juicy red apples sourced directly from local orchards.", 1, 4.99, 3.99, 120, "Best Seller", 4.9),
+            ("Organic Whole Milk (1 Gallon)", "Grade-A pasteurized whole milk, rich in calcium and vitamins.", 2, 4.50, 3.49, 80, "Daily Deal", 4.7),
+            ("Artisanal Whole Wheat Bread", "Freshly baked whole wheat bread with high fiber content.", 2, 3.20, 2.50, 60, "Fresh Baked", 4.6),
+            ("Fresh Greek Yogurt Pack (500g)", "Thick, creamy probiotic Greek yogurt.", 2, 5.00, 3.99, 90, "Hot Deal", 4.8),
+            ("Premium Roasted Almonds (250g)", "Crunchy dry-roasted Californian almonds with light sea salt.", 3, 8.99, 6.99, 200, "Super Saver", 4.9),
+            ("Natural Orange Juice (1L)", "100% pure squeezed orange juice with pulp.", 3, 3.99, 2.99, 100, "25% OFF", 4.7),
+            ("Dark Chocolate Bar 70% (100g)", "Rich Swiss dark chocolate bar made from fine cocoa beans.", 3, 3.00, 2.20, 150, "BOGO", 4.8),
+            ("Extra Virgin Olive Oil (500ml)", "Cold-pressed extra virgin olive oil for healthy cooking.", 4, 12.99, 9.99, 70, "Mega Saver", 4.9),
+            ("Basmati Premium Rice (5 kg)", "Long-grain aromatic Basmati rice perfect for biryani and daily meals.", 4, 18.99, 14.99, 50, "Best Value", 4.9),
+            ("Organic Wild Honey Jar (500g)", "Unfiltered 100% natural wild forest honey.", 4, 7.50, 5.99, 110, "Popular", 4.8),
+            ("Herbal Body Wash Lavender (500ml)", "Nourishing lavender herbal body shower gel.", 5, 8.00, 5.99, 90, "25% OFF", 4.6),
+            ("Gentle Foam Hand Soap (250ml)", "Antibacterial foaming hand soap with aloe vera.", 5, 4.00, 2.99, 140, "Hot Deal", 4.7),
+            ("Eco Laundry Detergent Liquid (2L)", "Plant-based powerful stain removing laundry liquid.", 6, 14.99, 11.99, 65, "20% OFF", 4.8),
+            ("Biodegradable Dishwashing Gel", "Tough on grease lemon dishwashing liquid gel.", 6, 4.50, 3.29, 130, "Super Deal", 4.6),
+            ("Bamboo Paper Towel Pack (4 Rolls)", "Ultra-absorbent 2-ply sustainable paper towels.", 6, 6.50, 4.99, 100, "Eco Choice", 4.7),
+        ]
+        cur.executemany("""
+        INSERT INTO products (name, description, category_id, mrp, price, stock, deal_tag, rating)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, products)
+
+        # Seed marketing coupons
+        coupons = [
+            ("VMART20", 20.0, 0.0, 10.0, "Flat 20% OFF on orders over $10"),
+            ("FRESH50", 0.0, 5.0, 25.0, "Flat $5.00 OFF on orders over $25"),
+            ("WELCOME10", 10.0, 0.0, 0.0, "10% OFF Welcome Bonus")
+        ]
+        cur.executemany("""
+        INSERT INTO marketing_coupons (code, discount_percent, flat_discount, min_order, description)
+        VALUES (?, ?, ?, ?, ?)
+        """, coupons)
+
+        # Seed sample completed orders for marketing analytics
+        cur.execute("""
+        INSERT INTO orders (user_id, total_mrp, total_price, discount_applied, final_amount, loyalty_points, shipping_address, payment_method)
+        VALUES (2, 28.48, 22.48, 4.50, 17.98, 18, '742 Evergreen Terrace, Springfield', 'Credit Card')
+        """)
+        cur.execute("""
+        INSERT INTO orders (user_id, total_mrp, total_price, discount_applied, final_amount, loyalty_points, shipping_address, payment_method)
+        VALUES (2, 45.97, 36.96, 7.39, 29.57, 30, '100 Main Street, New York', 'UPI / NetBanking')
+        """)
+
+    conn.commit()
+    conn.close()
+
+
+# Initialize database on startup
+init_db()
 
 
 # ----------------------------------------------------------------
-# Auth helpers
+# Auth Decorators & Helpers
 # ----------------------------------------------------------------
 def login_required(f):
     @wraps(f)
-    def decorated(*args, **kwargs):
-        if "user_id" not in session:
-            flash("Please login to continue.", "warning")
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash("Please login to access this page.", "warning")
             return redirect(url_for("login"))
         return f(*args, **kwargs)
-    return decorated
+    return decorated_function
 
 
 def admin_required(f):
     @wraps(f)
-    def decorated(*args, **kwargs):
+    def decorated_function(*args, **kwargs):
         if not session.get("is_admin"):
-            flash("Admin access only.", "danger")
+            flash("Admin access required.", "danger")
             return redirect(url_for("index"))
         return f(*args, **kwargs)
-    return decorated
+    return decorated_function
 
 
-def merchant_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not session.get("is_merchant"):
-            flash("Merchant access only.", "warning")
-            return redirect(url_for("index"))
-        return f(*args, **kwargs)
-    return decorated
-
-
-def get_or_create_cart(user_id):
-    """Return cart_id for user, creating one if missing."""
-    row = query("SELECT cart_id FROM cart WHERE user_id=%s", (user_id,), fetchone=True)
-    if row:
-        return row["cart_id"]
+def get_cart_count(user_id):
+    if not user_id:
+        return 0
     conn = get_db()
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute("INSERT INTO cart(user_id) VALUES(%s) RETURNING cart_id", (user_id,))
-                cart_id = cur.fetchone()[0]
-        conn.commit()
-        return cart_id
-    finally:
-        conn.close()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT SUM(ci.quantity)
+        FROM cart_items ci
+        JOIN cart c ON ci.cart_id = c.cart_id
+        WHERE c.user_id = ?
+    """, (user_id,))
+    res = cur.fetchone()[0]
+    conn.close()
+    return res if res else 0
 
 
-def cart_item_count(user_id):
-    cart_id = get_or_create_cart(user_id)
-    row = query(
-        "SELECT COALESCE(SUM(quantity),0) AS cnt FROM cart_items WHERE cart_id=%s",
-        (cart_id,), fetchone=True
-    )
-    return int(row["cnt"]) if row else 0
-
-
-# ----------------------------------------------------------------
-# Context processor – inject cart count into all templates
-# ----------------------------------------------------------------
 @app.context_processor
-def inject_cart_count():
-    count = 0
-    if "user_id" in session:
-        count = cart_item_count(session["user_id"])
-    return {"cart_count": count}
+def inject_global_data():
+    cart_count = get_cart_count(session.get("user_id"))
+    return dict(cart_count=cart_count)
 
 
 # ----------------------------------------------------------------
-# HOME – product listing
+# Public Routes
 # ----------------------------------------------------------------
 @app.route("/")
 def index():
-    search = request.args.get("q", "").strip()
-    cat_id = request.args.get("cat", "")
-    carbon_filter = request.args.get("carbon", "")
+    cat_id = request.args.get("category", type=int)
+    search_q = request.args.get("q", "").strip()
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM categories ORDER BY category_name")
+    categories = cur.fetchall()
 
     sql = """
-        SELECT p.*, c.category_name, u.name AS merchant_name
+        SELECT p.*, c.category_name,
+               ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_pct
         FROM products p
-        LEFT JOIN categories c ON p.category_id = c.category_id
-        LEFT JOIN users u ON p.merchant_id = u.user_id
-        WHERE p.status = 'active'
+        JOIN categories c ON p.category_id = c.category_id
+        WHERE 1=1
     """
     params = []
-    if search:
-        sql += " AND (p.name ILIKE %s OR p.description ILIKE %s)"
-        params += [f"%{search}%", f"%{search}%"]
-    if cat_id:
-        sql += " AND p.category_id=%s"
-        params.append(cat_id)
-    if carbon_filter:
-        sql += " AND p.carbon_level=%s"
-        params.append(carbon_filter)
-    sql += " ORDER BY p.product_id"
 
-    products = query(sql, params, fetchall=True)
-    categories = query("SELECT * FROM categories ORDER BY category_name", fetchall=True)
+    if cat_id:
+        sql += " AND p.category_id = ?"
+        params.append(cat_id)
+    if search_q:
+        sql += " AND (p.name LIKE ? OR p.description LIKE ?)"
+        params.append(f"%{search_q}%")
+        params.append(f"%{search_q}%")
+
+    sql += " ORDER BY p.product_id DESC"
+
+    cur.execute(sql, params)
+    products = cur.fetchall()
+
+    # Promotional marketing banners
+    cur.execute("SELECT * FROM marketing_coupons")
+    coupons = cur.fetchall()
+
+    conn.close()
 
     return render_template("index.html",
-                           products=products,
                            categories=categories,
-                           search=search,
+                           products=products,
+                           coupons=coupons,
                            selected_cat=cat_id,
-                           carbon_filter=carbon_filter)
+                           search_q=search_q)
 
 
-# ----------------------------------------------------------------
-# SIGNUP
-# ----------------------------------------------------------------
-@app.route("/signup", methods=["GET", "POST"])
-def signup():
-    if request.method == "POST":
-        name    = request.form["name"].strip()
-        email   = request.form["email"].strip().lower()
-        pwd     = request.form["password"]
-        address = request.form.get("address", "")
-        phone   = request.form.get("phone", "")
-
-        existing = query("SELECT user_id FROM users WHERE email=%s", (email,), fetchone=True)
-        if existing:
-            flash("Email already registered. Please login.", "danger")
-            return redirect(url_for("signup"))
-
-        hashed = generate_password_hash(pwd)
-        conn = get_db()
-        try:
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        "INSERT INTO users(name,email,password,address,phone) VALUES(%s,%s,%s,%s,%s)",
-                        (name, email, hashed, address, phone)
-                    )
-            conn.commit()
-        finally:
-            conn.close()
-
-        flash("Account created! Please login.", "success")
-        return redirect(url_for("login"))
-    return render_template("signup.html")
-
-
-# ----------------------------------------------------------------
-# LOGIN
-# ----------------------------------------------------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form["email"].strip().lower()
-        pwd   = request.form["password"]
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
 
-        user = query("SELECT * FROM users WHERE email=%s", (email,), fetchone=True)
-        if not user:
-            flash("Invalid credentials.", "danger")
-            return redirect(url_for("login"))
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE email = ?", (email,))
+        user = cur.fetchone()
+        conn.close()
 
-        # Allow plain-text seed passwords OR hashed passwords
-        pwd_ok = False
-        stored = user["password"]
-        if stored.startswith("pbkdf2:") or stored.startswith("scrypt:"):
-            pwd_ok = check_password_hash(stored, pwd)
+        if user and check_password_hash(user["password_hash"], password):
+            session["user_id"] = user["user_id"]
+            session["name"] = user["name"]
+            session["email"] = user["email"]
+            session["is_admin"] = bool(user["is_admin"])
+            flash(f"Welcome back to Vmart, {user['name']}!", "success")
+            return redirect(url_for("index"))
         else:
-            pwd_ok = (stored == pwd)  # seed data plain-text
+            flash("Invalid email or password.", "danger")
 
-        if not pwd_ok:
-            flash("Invalid credentials.", "danger")
-            return redirect(url_for("login"))
-
-        session["user_id"]  = user["user_id"]
-        session["name"]     = user["name"]
-        session["is_admin"] = user["is_admin"]
-        session["is_merchant"] = user["is_merchant"]
-        flash(f"Welcome back, {user['name']}!", "success")
-        return redirect(url_for("index"))
     return render_template("login.html")
 
 
-# ----------------------------------------------------------------
-# LOGOUT
-# ----------------------------------------------------------------
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+
+        if not name or not email or not password:
+            flash("All fields are required.", "warning")
+            return render_template("signup.html")
+
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT user_id FROM users WHERE email = ?", (email,))
+        if cur.fetchone():
+            conn.close()
+            flash("Email already registered.", "warning")
+            return render_template("signup.html")
+
+        pass_hash = generate_password_hash(password)
+        cur.execute("INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+                    (name, email, pass_hash))
+        conn.commit()
+
+        cur.execute("SELECT user_id FROM users WHERE email = ?", (email,))
+        new_user_id = cur.fetchone()["user_id"]
+        conn.close()
+
+        session["user_id"] = new_user_id
+        session["name"] = name
+        session["email"] = email
+        session["is_admin"] = False
+
+        flash("Registration successful! Welcome to Vmart Supermart.", "success")
+        return redirect(url_for("index"))
+
+    return render_template("signup.html")
+
+
 @app.route("/logout")
 def logout():
     session.clear()
-    flash("Logged out successfully.", "info")
-    return redirect(url_for("login"))
+    flash("You have logged out.", "info")
+    return redirect(url_for("index"))
 
 
 # ----------------------------------------------------------------
-# CART
+# Cart & Checkout Routes
 # ----------------------------------------------------------------
 @app.route("/cart")
 @login_required
 def cart():
-    cart_id = get_or_create_cart(session["user_id"])
-    items = query("""
-        SELECT ci.cart_item_id, ci.quantity,
-               p.product_id, p.name, p.price, p.base_carbon_emission,
-               p.carbon_level,
-               (p.price * ci.quantity)                AS item_total,
-               (p.base_carbon_emission * ci.quantity) AS item_carbon
+    user_id = session["user_id"]
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Ensure user has a cart
+    cur.execute("SELECT * FROM cart WHERE user_id = ?", (user_id,))
+    cart_obj = cur.fetchone()
+    if not cart_obj:
+        cur.execute("INSERT INTO cart (user_id) VALUES (?)", (user_id,))
+        conn.commit()
+        cur.execute("SELECT * FROM cart WHERE user_id = ?", (user_id,))
+        cart_obj = cur.fetchone()
+
+    cart_id = cart_obj["cart_id"]
+
+    cur.execute("""
+        SELECT ci.cart_item_id, ci.quantity, p.*,
+               (p.mrp * ci.quantity) AS item_total_mrp,
+               (p.price * ci.quantity) AS item_total_price,
+               ROUND(((p.mrp - p.price) * ci.quantity), 2) AS item_savings
         FROM cart_items ci
         JOIN products p ON ci.product_id = p.product_id
-        WHERE ci.cart_id=%s
-    """, (cart_id,), fetchall=True)
+        WHERE ci.cart_id = ?
+    """, (cart_id,))
+    items = cur.fetchall()
 
-    total_price  = sum(float(i["item_total"]) for i in items) if items else 0
-    total_carbon = sum(float(i["item_carbon"]) for i in items) if items else 0
-    suggestion   = carbon_model.get_cart_suggestion(total_carbon)
+    total_mrp = sum(item["item_total_mrp"] for item in items)
+    total_price = sum(item["item_total_price"] for item in items)
+    total_savings = total_mrp - total_price
+
+    # Apply promo coupon
+    coupon_code = cart_obj["coupon_code"]
+    discount_amount = cart_obj["discount_amount"] or 0.0
+
+    if coupon_code and total_price > 0:
+        cur.execute("SELECT * FROM marketing_coupons WHERE code = ?", (coupon_code,))
+        cp = cur.fetchone()
+        if cp:
+            if total_price >= cp["min_order"]:
+                if cp["discount_percent"] > 0:
+                    discount_amount = round((total_price * cp["discount_percent"]) / 100, 2)
+                elif cp["flat_discount"] > 0:
+                    discount_amount = min(cp["flat_discount"], total_price)
+                cur.execute("UPDATE cart SET discount_amount = ? WHERE cart_id = ?", (discount_amount, cart_id))
+                conn.commit()
+            else:
+                cur.execute("UPDATE cart SET coupon_code = NULL, discount_amount = 0.0 WHERE cart_id = ?", (cart_id,))
+                conn.commit()
+                flash(f"Coupon '{coupon_code}' removed. Minimum order for this coupon is ${cp['min_order']:.2f}", "warning")
+                coupon_code = None
+                discount_amount = 0.0
+
+    final_total = max(0.0, round(total_price - discount_amount, 2))
+
+    conn.close()
 
     return render_template("cart.html",
                            items=items,
-                           total_price=total_price,
-                           total_carbon=total_carbon,
-                           suggestion=suggestion)
+                           total_mrp=round(total_mrp, 2),
+                           total_price=round(total_price, 2),
+                           total_savings=round(total_savings, 2),
+                           coupon_code=coupon_code,
+                           discount_amount=round(discount_amount, 2),
+                           final_total=final_total)
 
 
-@app.route("/add_to_cart/<int:product_id>", methods=["POST"])
+@app.route("/cart/add/<int:product_id>", methods=["POST"])
 @login_required
 def add_to_cart(product_id):
-    qty     = int(request.form.get("quantity", 1))
-    cart_id = get_or_create_cart(session["user_id"])
+    user_id = session["user_id"]
+    quantity = request.form.get("quantity", 1, type=int)
 
-    existing = query(
-        "SELECT cart_item_id, quantity FROM cart_items WHERE cart_id=%s AND product_id=%s",
-        (cart_id, product_id), fetchone=True
-    )
     conn = get_db()
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                if existing:
-                    cur.execute(
-                        "UPDATE cart_items SET quantity=quantity+%s WHERE cart_item_id=%s",
-                        (qty, existing["cart_item_id"])
-                    )
-                else:
-                    cur.execute(
-                        "INSERT INTO cart_items(cart_id,product_id,quantity) VALUES(%s,%s,%s)",
-                        (cart_id, product_id, qty)
-                    )
-        conn.commit()
-    finally:
-        conn.close()
+    cur = conn.cursor()
 
-    flash("Item added to cart!", "success")
+    cur.execute("SELECT * FROM cart WHERE user_id = ?", (user_id,))
+    cart_obj = cur.fetchone()
+    if not cart_obj:
+        cur.execute("INSERT INTO cart (user_id) VALUES (?)", (user_id,))
+        conn.commit()
+        cur.execute("SELECT * FROM cart WHERE user_id = ?", (user_id,))
+        cart_obj = cur.fetchone()
+
+    cart_id = cart_obj["cart_id"]
+
+    cur.execute("SELECT * FROM cart_items WHERE cart_id = ? AND product_id = ?", (cart_id, product_id))
+    existing = cur.fetchone()
+
+    if existing:
+        new_qty = existing["quantity"] + quantity
+        cur.execute("UPDATE cart_items SET quantity = ? WHERE cart_item_id = ?", (new_qty, existing["cart_item_id"]))
+    else:
+        cur.execute("INSERT INTO cart_items (cart_id, product_id, quantity) VALUES (?, ?, ?)",
+                    (cart_id, product_id, quantity))
+
+    conn.commit()
+    conn.close()
+
+    flash("Item added to your Vmart basket!", "success")
     return redirect(request.referrer or url_for("index"))
 
 
-@app.route("/remove_from_cart/<int:cart_item_id>", methods=["POST"])
+@app.route("/cart/update/<int:item_id>", methods=["POST"])
 @login_required
-def remove_from_cart(cart_item_id):
+def update_cart_item(item_id):
+    quantity = request.form.get("quantity", 1, type=int)
     conn = get_db()
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM cart_items WHERE cart_item_id=%s", (cart_item_id,))
-        conn.commit()
-    finally:
-        conn.close()
-    flash("Item removed from cart.", "info")
+    cur = conn.cursor()
+    if quantity <= 0:
+        cur.execute("DELETE FROM cart_items WHERE cart_item_id = ?", (item_id,))
+    else:
+        cur.execute("UPDATE cart_items SET quantity = ? WHERE cart_item_id = ?", (quantity, item_id))
+    conn.commit()
+    conn.close()
     return redirect(url_for("cart"))
 
 
-@app.route("/update_cart/<int:cart_item_id>", methods=["POST"])
+@app.route("/cart/remove/<int:item_id>", methods=["POST"])
 @login_required
-def update_cart(cart_item_id):
-    qty = int(request.form.get("quantity", 1))
+def remove_cart_item(item_id):
     conn = get_db()
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                if qty <= 0:
-                    cur.execute("DELETE FROM cart_items WHERE cart_item_id=%s", (cart_item_id,))
-                else:
-                    cur.execute(
-                        "UPDATE cart_items SET quantity=%s WHERE cart_item_id=%s",
-                        (qty, cart_item_id)
-                    )
-        conn.commit()
-    finally:
-        conn.close()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM cart_items WHERE cart_item_id = ?", (item_id,))
+    conn.commit()
+    conn.close()
+    flash("Item removed from basket.", "info")
     return redirect(url_for("cart"))
 
 
-# ----------------------------------------------------------------
-# CHECKOUT
-# ----------------------------------------------------------------
+@app.route("/cart/apply-coupon", methods=["POST"])
+@login_required
+def apply_coupon():
+    code = request.form.get("coupon_code", "").strip().upper()
+    user_id = session["user_id"]
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM marketing_coupons WHERE code = ?", (code,))
+    coupon = cur.fetchone()
+
+    if not coupon:
+        flash("Invalid coupon code.", "danger")
+        conn.close()
+        return redirect(url_for("cart"))
+
+    cur.execute("SELECT * FROM cart WHERE user_id = ?", (user_id,))
+    cart_obj = cur.fetchone()
+    if cart_obj:
+        cur.execute("UPDATE cart SET coupon_code = ? WHERE cart_id = ?", (code, cart_obj["cart_id"]))
+        conn.commit()
+        flash(f"Coupon '{code}' applied successfully!", "success")
+
+    conn.close()
+    return redirect(url_for("cart"))
+
+
 @app.route("/checkout", methods=["GET", "POST"])
 @login_required
 def checkout():
-    cart_id = get_or_create_cart(session["user_id"])
-    
-    # Fetch cart items, including seller's warehouse location
-    items = query("""
-        SELECT ci.quantity, p.price, p.base_carbon_emission, p.product_id, p.name,
-               u.address AS warehouse_city, u.name AS merchant_name
+    user_id = session["user_id"]
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM cart WHERE user_id = ?", (user_id,))
+    cart_obj = cur.fetchone()
+
+    if not cart_obj:
+        conn.close()
+        return redirect(url_for("index"))
+
+    cur.execute("""
+        SELECT ci.quantity, p.*
         FROM cart_items ci
         JOIN products p ON ci.product_id = p.product_id
-        LEFT JOIN users u ON p.merchant_id = u.user_id
-        WHERE ci.cart_id=%s
-    """, (cart_id,), fetchall=True)
+        WHERE ci.cart_id = ?
+    """, (cart_obj["cart_id"],))
+    items = cur.fetchall()
 
     if not items:
-        flash("Your cart is empty.", "warning")
-        return redirect(url_for("cart"))
-        
-    # Get buyer's location
-    buyer = query("SELECT address FROM users WHERE user_id=%s", (session["user_id"],), fetchone=True)
-    buyer_city = buyer["address"] if buyer and buyer["address"] else "Unknown"
+        flash("Your basket is empty.", "warning")
+        conn.close()
+        return redirect(url_for("index"))
 
-    total_amount = 0.0
-    total_base_carbon = 0.0
-    total_shipping_carbon = 0.0
-    
-    # Calculate dynamic shipping for each item
-    for item in items:
-        warehouse = item["warehouse_city"] if item["warehouse_city"] else "Central Hub"
-        
-        distance_km = 500  # Default 500km fallback
-        if warehouse.lower() == buyer_city.lower() and buyer_city != "Unknown":
-            distance_km = 20 # Local delivery
-        elif warehouse != "Unknown" and buyer_city != "Unknown":
-            # Deterministic pseudo-distance based on city letters
-            hash_val = sum(ord(c) for c in f"{warehouse.lower()}-{buyer_city.lower()}")
-            distance_km = 50 + (hash_val % 1950)
-                
-        # Shipping emission = distance * 0.015 kg CO2e per km per unit * quantity
-        shipping_carbon = (distance_km * 0.015) * item["quantity"]
-        base_carbon = float(item["base_carbon_emission"]) * item["quantity"]
-        
-        item["distance_km"] = distance_km
-        item["shipping_carbon"] = shipping_carbon
-        item["total_item_carbon"] = base_carbon + shipping_carbon
-        item["amount"] = float(item["price"]) * item["quantity"]
-        
-        total_amount += item["amount"]
-        total_base_carbon += base_carbon
-        total_shipping_carbon += shipping_carbon
-        
-    total_carbon = total_base_carbon + total_shipping_carbon
+    total_mrp = sum(i["mrp"] * i["quantity"] for i in items)
+    total_price = sum(i["price"] * i["quantity"] for i in items)
+    discount_applied = cart_obj["discount_amount"] or 0.0
+    final_amount = max(0.0, round(total_price - discount_applied, 2))
+    loyalty_points = int(final_amount)  # $1 = 1 V-Point earned
 
     if request.method == "POST":
-        conn = get_db()
-        try:
-            with conn:
-                with conn.cursor() as cur:
-                    # Insert order
-                    cur.execute(
-                        """INSERT INTO orders(user_id, total_amount, total_carbon)
-                           VALUES(%s,%s,%s) RETURNING order_id""",
-                        (session["user_id"], total_amount, total_carbon)
-                    )
-                    order_id = cur.fetchone()[0]
+        address = request.form.get("address", "").strip()
+        payment_method = request.form.get("payment_method", "Cash on Delivery")
 
-                    # Insert order items saving the total combined carbon
-                    for item in items:
-                        cur.execute(
-                            """INSERT INTO order_items(order_id,product_id,quantity,price,carbon_contribution)
-                               VALUES(%s,%s,%s,%s,%s)""",
-                            (order_id, item["product_id"], item["quantity"],
-                             item["price"], item["total_item_carbon"])
-                        )
-                        # Reduce stock
-                        cur.execute(
-                            "UPDATE products SET stock=stock-%s WHERE product_id=%s",
-                            (item["quantity"], item["product_id"])
-                        )
-
-                    # Clear cart
-                    cur.execute("DELETE FROM cart_items WHERE cart_id=%s", (cart_id,))
-            conn.commit()
-        finally:
+        if not address:
+            flash("Shipping address is required.", "danger")
             conn.close()
+            return render_template("checkout.html", items=items, total_mrp=total_mrp,
+                                   total_price=total_price, discount_applied=discount_applied,
+                                   final_amount=final_amount, loyalty_points=loyalty_points)
 
-        flash(f"Order placed! Total carbon footprint: {total_carbon:.2f} kg CO₂e", "success")
+        cur.execute("""
+            INSERT INTO orders (user_id, total_mrp, total_price, discount_applied, final_amount, loyalty_points, shipping_address, payment_method)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (user_id, round(total_mrp, 2), round(total_price, 2), round(discount_applied, 2),
+              final_amount, loyalty_points, address, payment_method))
+        order_id = cur.lastrowid
+
+        for item in items:
+            cur.execute("""
+                INSERT INTO order_items (order_id, product_id, quantity, unit_price)
+                VALUES (?, ?, ?, ?)
+            """, (order_id, item["product_id"], item["quantity"], item["price"]))
+
+        # Clear cart
+        cur.execute("DELETE FROM cart_items WHERE cart_id = ?", (cart_obj["cart_id"],))
+        cur.execute("UPDATE cart SET coupon_code = NULL, discount_amount = 0.0 WHERE cart_id = ?", (cart_obj["cart_id"],))
+
+        conn.commit()
+        conn.close()
+
+        flash(f"Order #{order_id} placed successfully! You earned {loyalty_points} V-Points.", "success")
         return redirect(url_for("orders"))
 
+    conn.close()
     return render_template("checkout.html",
                            items=items,
-                           buyer_city=buyer_city,
-                           total_amount=total_amount,
-                           total_base_carbon=total_base_carbon,
-                           total_shipping_carbon=total_shipping_carbon,
-                           total_carbon=total_carbon)
+                           total_mrp=round(total_mrp, 2),
+                           total_price=round(total_price, 2),
+                           discount_applied=round(discount_applied, 2),
+                           final_amount=final_amount,
+                           loyalty_points=loyalty_points)
 
 
-# ----------------------------------------------------------------
-# ORDER HISTORY
-# ----------------------------------------------------------------
 @app.route("/orders")
 @login_required
 def orders():
-    user_orders = query("""
-        SELECT o.order_id, o.order_date, o.total_amount, o.total_carbon, o.status
-        FROM orders o
-        WHERE o.user_id=%s
-        ORDER BY o.order_date DESC
-    """, (session["user_id"],), fetchall=True)
+    user_id = session["user_id"]
+    conn = get_db()
+    cur = conn.cursor()
 
-    order_details = {}
-    for ord_ in user_orders:
-        items = query("""
-            SELECT oi.quantity, oi.price, oi.carbon_contribution,
-                   p.name, p.carbon_level
+    cur.execute("SELECT * FROM orders WHERE user_id = ? ORDER BY order_id DESC", (user_id,))
+    orders_list = cur.fetchall()
+
+    detailed_orders = []
+    for order in orders_list:
+        cur.execute("""
+            SELECT oi.quantity, oi.unit_price, p.name, p.deal_tag
             FROM order_items oi
             JOIN products p ON oi.product_id = p.product_id
-            WHERE oi.order_id=%s
-        """, (ord_["order_id"],), fetchall=True)
-        order_details[ord_["order_id"]] = items
+            WHERE oi.order_id = ?
+        """, (order["order_id"],))
+        items = cur.fetchall()
+        detailed_orders.append({
+            "order": order,
+            "items": items
+        })
 
-    return render_template("orders.html",
-                           orders=user_orders,
-                           order_details=order_details)
+    conn.close()
+    return render_template("orders.html", orders=detailed_orders)
 
 
 # ----------------------------------------------------------------
-# CARBON ANALYTICS DASHBOARD
+# Digital Marketing & Analytics Dashboard
 # ----------------------------------------------------------------
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    analytics = query("SELECT * FROM carbon_analytics", fetchone=True)
+    conn = get_db()
+    cur = conn.cursor()
 
-    top_green = query("""
-        SELECT name, base_carbon_emission, carbon_level
-        FROM products
-        ORDER BY base_carbon_emission ASC LIMIT 5
-    """, fetchall=True)
+    # Total orders, revenue, average order value, savings generated
+    cur.execute("SELECT COUNT(*), SUM(final_amount), SUM(total_mrp - final_amount), SUM(loyalty_points) FROM orders")
+    stats = cur.fetchone()
+    total_orders = stats[0] or 0
+    total_revenue = stats[1] or 0.0
+    total_customer_savings = stats[2] or 0.0
+    total_loyalty_points = stats[3] or 0
 
-    top_high = query("""
-        SELECT name, base_carbon_emission, carbon_level
-        FROM products
-        ORDER BY base_carbon_emission DESC LIMIT 5
-    """, fetchall=True)
+    avg_order_value = round(total_revenue / total_orders, 2) if total_orders > 0 else 0.0
 
-    by_category = query("""
-        SELECT c.category_name,
-               ROUND(AVG(p.base_carbon_emission)::NUMERIC, 2) AS avg_carbon,
-               COUNT(p.product_id) AS product_count
-        FROM products p
+    # Sales breakdown by Category (for Marketing charts)
+    cur.execute("""
+        SELECT c.category_name, SUM(oi.quantity * oi.unit_price) AS category_revenue
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.product_id
         JOIN categories c ON p.category_id = c.category_id
         GROUP BY c.category_name
-        ORDER BY avg_carbon DESC
-    """, fetchall=True)
+        ORDER BY category_revenue DESC
+    """)
+    cat_sales = cur.fetchall()
 
-    user_footprint = query("""
-        SELECT COALESCE(SUM(total_carbon),0) AS my_total
-        FROM orders WHERE user_id=%s
-    """, (session["user_id"],), fetchone=True)
+    # Marketing coupon usage stats
+    cur.execute("SELECT * FROM marketing_coupons")
+    coupons = cur.fetchall()
+
+    conn.close()
 
     return render_template("dashboard.html",
-                           analytics=analytics,
-                           top_green=top_green,
-                           top_high=top_high,
-                           by_category=by_category,
-                           user_footprint=user_footprint)
+                           total_orders=total_orders,
+                           total_revenue=round(total_revenue, 2),
+                           total_customer_savings=round(total_customer_savings, 2),
+                           avg_order_value=avg_order_value,
+                           total_loyalty_points=total_loyalty_points,
+                           cat_sales=cat_sales,
+                           coupons=coupons)
 
 
 # ----------------------------------------------------------------
-# AI SUGGESTION ENDPOINT  (AJAX)
-# ----------------------------------------------------------------
-@app.route("/ai-suggest", methods=["POST"])
-def ai_suggest():
-    data = request.get_json()
-    desc = data.get("description", "")
-    cat_id = data.get("category_id", 1)
-    price = data.get("price", 0)
-    
-    # Auto-estimate base carbon
-    base_co2 = carbon_model.estimate_base_carbon(desc, cat_id, price)
-    
-    result = carbon_model.predict(
-        description          = desc,
-        category_id          = cat_id,
-        price                = price,
-        base_carbon_emission = base_co2,
-    )
-    return jsonify(result)
-
-
-# ----------------------------------------------------------------
-# MERCHANT - dashboard and features
-# ----------------------------------------------------------------
-@app.route("/merchant-signup", methods=["GET", "POST"])
-def merchant_signup():
-    if request.method == "POST":
-        name    = request.form["name"].strip()
-        email   = request.form["email"].strip().lower()
-        pwd     = request.form["password"]
-        warehouse = request.form.get("warehouse", "").strip()
-
-        existing = query("SELECT user_id FROM users WHERE email=%s", (email,), fetchone=True)
-        if existing:
-            flash("Email already registered. Please login.", "danger")
-            return redirect(url_for("merchant_signup"))
-
-        hashed = generate_password_hash(pwd)
-        conn = get_db()
-        try:
-            with conn:
-                with conn.cursor() as cur:
-                    # Store warehouse location in address field for merchants
-                    cur.execute(
-                        "INSERT INTO users(name,email,password,address,is_merchant) VALUES(%s,%s,%s,%s,TRUE)",
-                        (name, email, hashed, warehouse)
-                    )
-            conn.commit()
-        finally:
-            conn.close()
-
-        flash("Merchant account created! Please login.", "success")
-        return redirect(url_for("merchant_login"))
-    return render_template("merchant_signup.html")
-
-
-@app.route("/merchant-login", methods=["GET", "POST"])
-def merchant_login():
-    if request.method == "POST":
-        email = request.form["email"].strip().lower()
-        pwd   = request.form["password"]
-
-        user = query("SELECT * FROM users WHERE email=%s AND is_merchant=TRUE", (email,), fetchone=True)
-        if not user:
-            flash("Invalid merchant credentials or not a merchant.", "danger")
-            return redirect(url_for("merchant_login"))
-
-        pwd_ok = False
-        stored = user["password"]
-        if stored.startswith("pbkdf2:") or stored.startswith("scrypt:"):
-            pwd_ok = check_password_hash(stored, pwd)
-        else:
-            pwd_ok = (stored == pwd)
-
-        if not pwd_ok:
-            flash("Invalid credentials.", "danger")
-            return redirect(url_for("merchant_login"))
-
-        session["user_id"]  = user["user_id"]
-        session["name"]     = user["name"]
-        session["is_admin"] = user["is_admin"]
-        session["is_merchant"] = True
-        flash(f"Welcome to Merchant Panel, {user['name']}!", "success")
-        return redirect(url_for("merchant_dashboard"))
-    return render_template("merchant_login.html")
-
-
-@app.route("/merchant")
-@login_required
-@merchant_required
-def merchant_dashboard():
-    products = query("""
-        SELECT p.*, c.category_name
-        FROM products p
-        LEFT JOIN categories c ON p.category_id = c.category_id
-        WHERE p.merchant_id=%s
-        ORDER BY p.product_id
-    """, (session["user_id"],), fetchall=True)
-    
-    categories = query("SELECT * FROM categories ORDER BY category_name", fetchall=True)
-    
-    orders_qs = query("""
-        SELECT o.order_date, oi.quantity, oi.price, p.name AS product_name, u.name AS buyer_name
-        FROM order_items oi
-        JOIN orders o ON oi.order_id = o.order_id
-        JOIN products p ON oi.product_id = p.product_id
-        JOIN users u ON o.user_id = u.user_id
-        WHERE p.merchant_id = %s
-        ORDER BY o.order_date DESC
-    """, (session["user_id"],), fetchall=True)
-
-    return render_template("merchant.html", products=products, categories=categories, orders=orders_qs)
-
-
-@app.route("/merchant/add-product", methods=["POST"])
-@login_required
-@merchant_required
-def merchant_add_product():
-    name        = request.form["name"].strip()
-    description = request.form["description"].strip()
-    price       = float(request.form["price"])
-    stock       = int(request.form["stock"])
-    category_id = int(request.form["category_id"])
-
-    # Temporarily set placeholders while AI scans
-    base_co2 = 0.0
-    carbon_level = "medium"
-
-    conn = get_db()
-    product_id = None
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """INSERT INTO products
-                       (name,description,price,stock,category_id,base_carbon_emission,carbon_level,merchant_id,status)
-                       VALUES(%s,%s,%s,%s,%s,%s,%s,%s,'scanning') RETURNING product_id""",
-                    (name, description, price, stock, category_id, base_co2, carbon_level, session["user_id"])
-                )
-                product_id = cur.fetchone()[0]
-        conn.commit()
-    finally:
-        conn.close()
-
-    # Background function to perform the AI Scan
-    def scan_product_background(pid, desc, cat_id, prc):
-        time.sleep(5)  # Simulate AI scanning delay
-        try:
-            # 1. AI estimates base emission
-            ai_base_co2 = carbon_model.estimate_base_carbon(desc, cat_id, prc)
-            # 2. AI classifies level
-            ai_res = carbon_model.predict(desc, cat_id, prc, ai_base_co2)
-            c_level = ai_res["label"]
-            
-            # Update database
-            bg_conn = get_db()
-            with bg_conn:
-                with bg_conn.cursor() as bg_cur:
-                    bg_cur.execute(
-                        "UPDATE products SET base_carbon_emission=%s, carbon_level=%s, status='active' WHERE product_id=%s",
-                        (ai_base_co2, c_level, pid)
-                    )
-            bg_conn.commit()
-            bg_conn.close()
-        except Exception as e:
-            print(f"Error in background AI scan for product {pid}: {e}")
-
-    # Spawn thread to avoid blocking the user
-    thread = threading.Thread(target=scan_product_background, args=(product_id, description, category_id, price))
-    thread.start()
-
-    flash(f"Product added! Our AI is currently scanning the description to estimate its carbon footprint. It will be listed shortly.", "info")
-    return redirect(url_for("merchant_dashboard"))
-
-
-# ----------------------------------------------------------------
-# ADMIN – main panel
+# Admin Panel Routes
 # ----------------------------------------------------------------
 @app.route("/admin")
 @login_required
 @admin_required
 def admin():
-    products   = query("""
-        SELECT p.*, c.category_name FROM products p
-        LEFT JOIN categories c ON p.category_id=c.category_id
-        ORDER BY p.product_id
-    """, fetchall=True)
-    categories = query("SELECT * FROM categories ORDER BY category_name", fetchall=True)
-    orders_all = query("""
-        SELECT o.*, u.name AS user_name
-        FROM orders o JOIN users u ON o.user_id=u.user_id
-        ORDER BY o.order_date DESC LIMIT 50
-    """, fetchall=True)
-    users_all = query("SELECT * FROM users ORDER BY created_at DESC", fetchall=True)
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT p.*, c.category_name
+        FROM products p
+        JOIN categories c ON p.category_id = c.category_id
+        ORDER BY p.product_id DESC
+    """)
+    products = cur.fetchall()
+
+    cur.execute("SELECT * FROM categories ORDER BY category_name")
+    categories = cur.fetchall()
+
+    cur.execute("""
+        SELECT o.*, u.name AS customer_name, u.email AS customer_email
+        FROM orders o
+        JOIN users u ON o.user_id = u.user_id
+        ORDER BY o.order_id DESC
+    """)
+    orders_list = cur.fetchall()
+
+    conn.close()
+
     return render_template("admin.html",
                            products=products,
                            categories=categories,
-                           orders=orders_all,
-                           users=users_all)
+                           orders=orders_list)
 
 
 @app.route("/admin/add-product", methods=["GET", "POST"])
 @login_required
 @admin_required
 def add_product():
-    categories = query("SELECT * FROM categories ORDER BY category_name", fetchall=True)
-    ai_result  = None
+    conn = get_db()
+    cur = conn.cursor()
 
     if request.method == "POST":
-        name        = request.form["name"].strip()
-        description = request.form["description"].strip()
-        price       = float(request.form["price"])
-        stock       = int(request.form["stock"])
-        category_id = int(request.form["category_id"])
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+        category_id = request.form.get("category_id", type=int)
+        mrp = request.form.get("mrp", type=float)
+        price = request.form.get("price", type=float)
+        stock = request.form.get("stock", 100, type=int)
+        deal_tag = request.form.get("deal_tag", "Hot Deal")
 
-        # Automatically estimate base emission
-        base_co2 = carbon_model.estimate_base_carbon(description, category_id, price)
-
-        # AI predict label
-        ai_result = carbon_model.predict(description, category_id, price, base_co2)
-        carbon_level = ai_result["label"]
-
-        conn = get_db()
-        try:
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        """INSERT INTO products
-                           (name,description,price,stock,category_id,base_carbon_emission,carbon_level)
-                           VALUES(%s,%s,%s,%s,%s,%s,%s)""",
-                        (name, description, price, stock, category_id, base_co2, carbon_level)
-                    )
+        if not name or not category_id or mrp is None or price is None:
+            flash("Name, category, MRP, and sale price are required.", "warning")
+        else:
+            cur.execute("""
+                INSERT INTO products (name, description, category_id, mrp, price, stock, deal_tag)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (name, description, category_id, mrp, price, stock, deal_tag))
             conn.commit()
-        finally:
+            flash(f"Supermarket Product '{name}' added successfully!", "success")
             conn.close()
+            return redirect(url_for("admin"))
 
-        flash(f"Product added! AI classified as: {carbon_level.upper()} carbon.", "success")
-        return redirect(url_for("admin"))
+    cur.execute("SELECT * FROM categories ORDER BY category_name")
+    categories = cur.fetchall()
+    conn.close()
 
-    return render_template("add_product.html",
-                           categories=categories,
-                           ai_result=ai_result)
-
-
-@app.route("/admin/add-category", methods=["POST"])
-@login_required
-@admin_required
-def add_category():
-    name = request.form["category_name"].strip()
-    conn = get_db()
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute("INSERT INTO categories(category_name) VALUES(%s)", (name,))
-        conn.commit()
-        flash(f"Category '{name}' added.", "success")
-    except Exception as e:
-        flash(f"Error: {e}", "danger")
-    finally:
-        conn.close()
-    return redirect(url_for("admin"))
+    return render_template("add_product.html", categories=categories)
 
 
 @app.route("/admin/delete-product/<int:product_id>", methods=["POST"])
@@ -792,19 +753,13 @@ def add_category():
 @admin_required
 def delete_product(product_id):
     conn = get_db()
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM products WHERE product_id=%s", (product_id,))
-        conn.commit()
-        flash("Product deleted.", "info")
-    finally:
-        conn.close()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM products WHERE product_id = ?", (product_id,))
+    conn.commit()
+    conn.close()
+    flash("Product deleted from inventory.", "info")
     return redirect(url_for("admin"))
 
 
-# ----------------------------------------------------------------
-# Run
-# ----------------------------------------------------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)

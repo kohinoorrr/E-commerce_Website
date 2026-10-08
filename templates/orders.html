@@ -1,99 +1,77 @@
-{% extends "base.html" %}
-{% block title %}My Orders{% endblock %}
+{% extends 'base.html' %}
+
+{% block title %}My Orders | Vmart Supermart{% endblock %}
 
 {% block content %}
 <div class="container py-5">
-    <h2 class="fw-bold mb-4"><i class="bi bi-bag-heart me-2 text-success"></i>My Orders</h2>
+    <h2 class="fw-bold mb-4 text-dark"><i class="bi bi-bag-check-fill text-success me-2"></i>My Orders</h2>
 
     {% if orders %}
-    <div class="accordion eco-accordion" id="ordersAccordion">
-        {% for order in orders %}
-        {% set carbon = order.total_carbon|float %}
-        {% if carbon < 5 %} {% set cbadge='bg-success' %} {% elif carbon < 30 %} {% set cbadge='bg-warning' %} {% else
-            %} {% set cbadge='bg-danger' %} {% endif %} {% if order.status=='completed' %} {% set sbadge='bg-success' %}
-            {% else %} {% set sbadge='bg-secondary' %} {% endif %} {% if carbon < 5 %} {% set ctxt='text-success' %} {%
-            elif carbon < 30 %} {% set ctxt='text-warning' %} {% else %} {% set ctxt='text-danger' %} {% endif %} <div
-            class="accordion-item eco-accordion-item mb-3 shadow-sm">
-            <h2 class="accordion-header">
-                <button class="accordion-button {% if not loop.first %}collapsed{% endif %} eco-accordion-btn"
-                    type="button" data-bs-toggle="collapse" data-bs-target="#order{{ order.order_id }}">
-                    <div class="d-flex w-100 align-items-center flex-wrap gap-2">
-                        <span class="fw-bold">Order #{{ order.order_id }}</span>
-                        <span class="badge text-bg-secondary rounded-pill">
-                            {{ order.order_date.strftime('%d %b %Y') if order.order_date else 'N/A' }}
-                        </span>
-                        <span class="fw-semibold text-success">₹{{ "%.2f"|format(order.total_amount|float) }}</span>
-                        <span class="badge ms-auto me-3 {{ cbadge }}">
-                            <i class="bi bi-cloud me-1"></i>{{ "%.2f"|format(carbon) }} kg CO₂e
-                        </span>
+    <div class="row g-4">
+        {% for entry in orders %}
+        {% set o = entry.order %}
+        {% set items = entry.items %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header bg-dark text-white p-3 d-flex flex-wrap justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-bold fs-5">Order #{{ o.order_id }}</span>
+                        <span class="badge bg-success ms-2">{{ o.status }}</span>
                     </div>
-                </button>
-            </h2>
-            <div id="order{{ order.order_id }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}"
-                data-bs-parent="#ordersAccordion">
-                <div class="accordion-body pt-0">
-                    {% set items = order_details[order.order_id] %}
-                    {% if items %}
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle mt-3">
-                            <thead class="table-eco-header">
+                    <div class="small text-muted">
+                        Placed on: {{ o.created_at }}
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="table-responsive mb-3">
+                        <table class="table align-middle mb-0">
+                            <thead class="bg-light">
                                 <tr>
-                                    <th class="ps-2">Product</th>
-                                    <th class="text-center">Qty</th>
-                                    <th class="text-end">Price</th>
-                                    <th class="text-end pe-2">CO₂ Contribution</th>
+                                    <th>Item</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Total</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for item in items %}
                                 <tr>
-                                    <td class="ps-2">
-                                        {{ item.name }}
-                                        {% if item.carbon_level == 'low' %}
-                                        <span class="badge text-bg-success ms-1 small">Low Carbon</span>
-                                        {% elif item.carbon_level == 'high' %}
-                                        <span class="badge text-bg-danger ms-1 small">High Carbon</span>
-                                        {% else %}
-                                        <span class="badge text-bg-warning ms-1 small">Medium</span>
-                                        {% endif %}
+                                    <td>
+                                        <span class="fw-bold">{{ item.name }}</span>
+                                        <span class="badge bg-danger ms-1">{{ item.deal_tag }}</span>
                                     </td>
-                                    <td class="text-center">{{ item.quantity }}</td>
-                                    <td class="text-end">₹{{ "%.2f"|format(item.price|float) }}</td>
-                                    <td class="text-end pe-2">
-                                        {{ "%.2f"|format(item.carbon_contribution|float) }} kg CO₂e
-                                    </td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>${{ "%.2f"|format(item.unit_price) }}</td>
+                                    <td class="fw-bold">${{ "%.2f"|format(item.unit_price * item.quantity) }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
-                    {% endif %}
-                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                        <span class="badge {{ sbadge }} px-3 py-2">
-                            <i class="bi bi-check2 me-1"></i>{{ order.status|title }}
-                        </span>
-                        <div class="text-end">
-                            <span class="text-muted small me-3">
-                                <i class="bi bi-cloud me-1"></i>Total impact:
-                                <strong class="{{ ctxt }}">
-                                    {{ "%.2f"|format(carbon) }} kg CO₂e
-                                </strong>
-                            </span>
+
+                    <div class="row bg-light p-3 rounded-3 align-items-center">
+                        <div class="col-md-6 mb-2 mb-md-0 small">
+                            <strong>Delivery Address:</strong> {{ o.shipping_address }}<br>
+                            <strong>Payment Method:</strong> {{ o.payment_method }}
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <span class="text-muted small me-2">Savings: ${{ "%.2f"|format(o.total_mrp - o.final_amount) }}</span>
+                            <span class="badge bg-warning text-dark me-2">+{{ o.loyalty_points }} V-Points</span>
+                            <span class="fs-4 fw-extrabold text-danger">${{ "%.2f"|format(o.final_amount) }}</span>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-</div>
-{% else %}
-<div class="text-center py-5">
-    <i class="bi bi-bag-x display-1 text-muted"></i>
-    <h4 class="mt-3 text-muted">No orders yet</h4>
-    <a href="{{ url_for('index') }}" class="btn btn-eco mt-3">
-        <i class="bi bi-shop me-2"></i>Start Shopping
-    </a>
-</div>
-{% endif %}
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-bag-x text-muted display-1 mb-3"></i>
+        <h3>No past orders found</h3>
+        <p class="text-muted">Place your first order at Vmart Supermart today!</p>
+        <a href="{{ url_for('index') }}" class="btn btn-vmart px-4">Browse Supermart Deals</a>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

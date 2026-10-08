@@ -1,130 +1,89 @@
-{% extends "base.html" %}
-{% block title %}Checkout{% endblock %}
+{% extends 'base.html' %}
+
+{% block title %}Checkout | Vmart Supermart{% endblock %}
 
 {% block content %}
-{% if total_carbon < 5 %} {% set ctxt='text-success' %} {% set cbg='bg-success-subtle' %} {% elif total_carbon < 30 %}
-    {% set ctxt='text-warning' %} {% set cbg='bg-warning-subtle' %} {% else %} {% set ctxt='text-danger' %} {% set
-    cbg='bg-danger-subtle' %} {% endif %} {% set km=(total_carbon * 5.5)|round(1) %} <div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <h2 class="fw-bold mb-4"><i class="bi bi-bag-check me-2 text-success"></i>Checkout</h2>
+<div class="container py-5">
+    <h2 class="fw-bold mb-4 text-dark"><i class="bi bi-shield-check text-success me-2"></i>Checkout</h2>
 
-            <!-- Order items summary -->
-            <div class="card eco-card shadow-sm mb-4">
-                <div class="card-header eco-card-header">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-list-check me-2"></i>Order Items Details</h6>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead class="table-eco-header">
-                                <tr>
-                                    <th class="ps-3 w-25">Product</th>
-                                    <th>Delivery Distance</th>
-                                    <th class="text-center">Qty</th>
-                                    <th class="text-end">Subtotal</th>
-                                    <th class="text-end pe-3">CO₂e Split</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in items %}
-                                <tr>
-                                    <td class="ps-3">
-                                        <span class="fw-medium d-block">{{ item.name }}</span>
-                                        <small class="text-muted"><i class="bi bi-shop me-1"></i>{{ item.merchant_name
-                                            or 'Eco Shop' }}</small>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted d-block">From: {{ item.warehouse_city or 'Hub'
-                                            }}</small>
-                                        <small class="text-muted d-block">To: {{ buyer_city }}</small>
-                                        <span class="badge bg-secondary mt-1"><i class="bi bi-truck me-1"></i>{{
-                                            item.distance_km }} km</span>
-                                    </td>
-                                    <td class="text-center">{{ item.quantity }}</td>
-                                    <td class="text-end fw-semibold">₹{{ "%.2f"|format(item.amount) }}</td>
-                                    <td class="text-end pe-3">
-                                        <div class="small">
-                                            <span class="text-muted">Base:</span> {{
-                                            "%.2f"|format(item.base_carbon_emission|float * item.quantity) }} kg
-                                        </div>
-                                        <div class="small">
-                                            <span class="text-muted">Ship:</span> <span class="text-danger">+{{
-                                                "%.2f"|format(item.shipping_carbon) }} kg</span>
-                                        </div>
-                                        <div class="fw-bold mt-1 border-top pt-1 text-{{ ctxt }}">
-                                            {{ "%.2f"|format(item.total_item_carbon) }} kg
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot class="table-eco-header fw-bold">
-                                <tr>
-                                    <td colspan="3" class="ps-3 text-end">Total Amount:</td>
-                                    <td class="text-end fs-5 text-success">₹{{ "%.2f"|format(total_amount) }}</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <h4 class="fw-bold text-dark border-bottom pb-3 mb-4">Shipping & Payment Details</h4>
+
+                <form method="POST" action="{{ url_for('checkout') }}">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Delivery Address</label>
+                        <textarea name="address" class="form-control form-control-lg" rows="3" placeholder="Enter your full street address, city, zip code..." required></textarea>
                     </div>
-                </div>
-            </div>
 
-            <!-- Carbon impact box -->
-            <div class="card border-0 mb-4 {{ cbg }} shadow-sm">
-                <div class="card-body d-flex gap-4 p-4 align-items-center">
-                    <i class="bi bi-cloud-haze2 display-3 {{ ctxt }}"></i>
-                    <div class="w-100">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h5 class="fw-bold mb-0">Total Carbon Footprint</h5>
-                            <h4 class="fw-bold mb-0 {{ ctxt }}">{{ "%.2f"|format(total_carbon) }} kg CO₂e</h4>
-                        </div>
-                        <div class="progress mb-2" style="height: 10px;">
-                            {% set base_pct = (total_base_carbon / total_carbon * 100) if total_carbon > 0 else 0 %}
-                            {% set ship_pct = (total_shipping_carbon / total_carbon * 100) if total_carbon > 0 else 0 %}
-                            <div class="progress-bar bg-success" style="width: {{ base_pct }}%"
-                                title="Base Product Emissions"></div>
-                            <div class="progress-bar bg-danger" style="width: {{ ship_pct }}%"
-                                title="Shipping Emissions"></div>
-                        </div>
-                        <div class="d-flex justify-content-between small text-muted">
-                            <span><i class="bi bi-circle-fill text-success small me-1"></i>Products: {{
-                                "%.2f"|format(total_base_carbon) }} kg</span>
-                            <span><i class="bi bi-circle-fill text-danger small me-1"></i>Shipping: {{
-                                "%.2f"|format(total_shipping_carbon) }} kg</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Place order form -->
-            <div class="card eco-card shadow-sm">
-                <div class="card-body p-4">
-                    <h6 class="fw-bold mb-3"><i class="bi bi-geo-alt me-2"></i>Delivery Registration</h6>
-                    <p class="text-muted small mb-3">Your registered address (<strong>{{ buyer_city }}</strong>) was
-                        used to calculate dynamic delivery distance.</p>
-                    <form method="POST" action="{{ url_for('checkout') }}">
-                        <div class="d-flex align-items-center gap-2 mb-4 p-3 bg-light rounded text-dark">
-                            <input type="checkbox" class="form-check-input mt-0" id="confirmCarbon" required>
-                            <label class="form-check-label small" for="confirmCarbon">
-                                I acknowledge the combined carbon footprint of manufacturing and shipping
-                                (<strong>{{ "%.2f"|format(total_carbon) }} kg CO₂e</strong>).
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Payment Method</label>
+                        <div class="d-flex flex-column gap-2">
+                            <label class="border p-3 rounded-3 d-flex align-items-center cursor-pointer">
+                                <input type="radio" name="payment_method" value="Cash on Delivery" checked class="form-check-input me-3">
+                                <div>
+                                    <div class="fw-bold"><i class="bi bi-cash-stack text-success me-2"></i>Cash on Delivery</div>
+                                    <div class="small text-muted">Pay with cash or card upon delivery</div>
+                                </div>
+                            </label>
+                            <label class="border p-3 rounded-3 d-flex align-items-center cursor-pointer">
+                                <input type="radio" name="payment_method" value="UPI / Online Transfer" class="form-check-input me-3">
+                                <div>
+                                    <div class="fw-bold"><i class="bi bi-qr-code-scan text-primary me-2"></i>UPI / Instant Online Payment</div>
+                                    <div class="small text-muted">Pay via GPay, PhonePe, Paytm, or Credit/Debit Card</div>
+                                </div>
                             </label>
                         </div>
-                        <button type="submit" class="btn btn-eco w-100 py-3 fw-semibold fs-5">
-                            <i class="bi bi-check2-circle me-2"></i>Confirm & Place Order
-                        </button>
-                    </form>
-                </div>
-            </div>
+                    </div>
 
-            <div class="text-center mt-4">
-                <a href="{{ url_for('cart') }}" class="btn btn-link text-muted text-decoration-none">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Cart
-                </a>
+                    <button type="submit" class="btn btn-vmart btn-lg w-100 py-3 shadow">
+                        <i class="bi bi-check-circle-fill me-2"></i>Place Order (${{ "%.2f"|format(final_amount) }})
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <h4 class="fw-bold text-dark border-bottom pb-3 mb-3">Order Summary</h4>
+                <div class="mb-3">
+                    {% for item in items %}
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <div class="fw-bold text-dark">{{ item.name }}</div>
+                            <small class="text-muted">Qty: {{ item.quantity }} × ${{ "%.2f"|format(item.price) }}</small>
+                        </div>
+                        <span class="fw-bold">${{ "%.2f"|format(item.price * item.quantity) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="d-flex justify-content-between text-muted mb-1">
+                    <span>Subtotal (MRP)</span>
+                    <span>${{ "%.2f"|format(total_mrp) }}</span>
+                </div>
+                <div class="d-flex justify-content-between text-success mb-1">
+                    <span>Vmart Discount</span>
+                    <span>-${{ "%.2f"|format(total_mrp - total_price) }}</span>
+                </div>
+                {% if discount_applied > 0 %}
+                <div class="d-flex justify-content-between text-primary mb-1">
+                    <span>Promo Coupon Discount</span>
+                    <span>-${{ "%.2f"|format(discount_applied) }}</span>
+                </div>
+                {% endif %}
+                <hr>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold text-dark fs-5">Total Payable</span>
+                    <span class="fw-extrabold text-danger fs-3">${{ "%.2f"|format(final_amount) }}</span>
+                </div>
+
+                <div class="badge bg-warning text-dark p-2 w-100 fs-6">
+                    <i class="bi bi-star-fill me-1"></i> You will earn {{ loyalty_points }} V-Points
+                </div>
             </div>
         </div>
     </div>
-    </div>
-    {% endblock %}
+</div>
+{% endblock %}

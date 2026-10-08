@@ -1,50 +1,50 @@
-{% extends "base.html" %}
-{% block title %}Shop{% endblock %}
+{% extends 'base.html' %}
+
+{% block title %}Shop Supermarket Deals{% endblock %}
 
 {% block content %}
-
-<!-- ===== HERO ===== -->
-<section class="hero-section">
+<!-- ========== HERO BANNER ========== -->
+<section class="hero-section py-5">
     <div class="container">
-        <div class="row align-items-center py-5">
+        <div class="row align-items-center">
             <div class="col-lg-7">
-                <span class="badge bg-success-subtle text-success px-3 py-2 mb-3 rounded-pill">
-                    <i class="bi bi-leaf me-1"></i> Carbon-Aware Shopping
+                <span class="promo-tag mb-3">
+                    <i class="bi bi-lightning-charge-fill me-1"></i> Mega Supermarket Sale – Up to 50% OFF!
                 </span>
-                <h1 class="hero-title mb-3">Shop Smarter.<br>Live <span class="text-gradient">Greener.</span></h1>
-                <p class="lead text-muted mb-4">Every product displays its real carbon footprint. Make informed,
-                    eco-conscious choices with AI-powered sustainability insights.</p>
-                <div class="d-flex gap-3 flex-wrap">
-                    <a href="#products" class="btn btn-eco btn-lg px-4">
-                        <i class="bi bi-shop me-2"></i>Browse Products
+                <h1 class="hero-title my-3">
+                    Everyday Freshness,<br>
+                    <span class="text-gradient">Superstore Prices.</span>
+                </h1>
+                <p class="lead text-secondary mb-4">
+                    Shop farm-fresh groceries, dairy, snacks, and home essentials with instant digital coupons, fast delivery, and extra V-Points rewards!
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="#products" class="btn btn-vmart btn-lg px-4 shadow">
+                        <i class="bi bi-cart-plus me-2"></i>Browse Products
                     </a>
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-success btn-lg px-4">
-                        <i class="bi bi-bar-chart me-2"></i>Carbon Dashboard
+                    {% if session.user_id %}
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-lg px-4">
+                        <i class="bi bi-graph-up me-2"></i>Marketing Dashboard
                     </a>
+                    {% endif %}
                 </div>
             </div>
-            <div class="col-lg-5 d-none d-lg-flex justify-content-center mt-4 mt-lg-0">
-                <div class="hero-stats-card">
-                    <div class="stat-item">
-                        <i class="bi bi-tree-fill text-success fs-3"></i>
-                        <div>
-                            <div class="fw-bold">CO₂ Tracked</div>
-                            <div class="text-muted small">On every order</div>
+            <div class="col-lg-5 mt-4 mt-lg-0 text-center">
+                <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-white p-4">
+                    <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-3">
+                        <div class="text-start">
+                            <span class="badge bg-danger fs-6 mb-1">PROMO OFFER</span>
+                            <h5 class="fw-bold mb-0 text-dark">Use Code: <span class="text-primary fw-extrabold">VMART20</span></h5>
                         </div>
+                        <i class="bi bi-ticket-perforated-fill text-warning fs-1"></i>
                     </div>
-                    <div class="stat-item mt-3">
-                        <i class="bi bi-robot text-info fs-3"></i>
-                        <div>
-                            <div class="fw-bold">AI Classifier</div>
-                            <div class="text-muted small">Low / Medium / High</div>
-                        </div>
+                    <div class="text-start small text-muted mb-3">
+                        <i class="bi bi-check2-circle text-success me-1"></i> Flat 20% OFF on all supermarket products.<br>
+                        <i class="bi bi-check2-circle text-success me-1"></i> Earn 1 V-Point for every $1 spent!
                     </div>
-                    <div class="stat-item mt-3">
-                        <i class="bi bi-recycle text-warning fs-3"></i>
-                        <div>
-                            <div class="fw-bold">Eco Alternatives</div>
-                            <div class="text-muted small">Smart suggestions</div>
-                        </div>
+                    <div class="p-3 bg-light rounded-3 d-flex align-items-center justify-content-between">
+                        <span class="small fw-semibold text-secondary">First Order Bonus</span>
+                        <span class="badge bg-success">Active Campaign</span>
                     </div>
                 </div>
             </div>
@@ -52,143 +52,111 @@
     </div>
 </section>
 
-<!-- ===== FILTERS ===== -->
-<section id="products" class="py-4 bg-light-subtle">
+<!-- ========== PROMO COUPONS BAR ========== -->
+<section class="bg-dark text-white py-3">
     <div class="container">
-        <form method="GET" action="{{ url_for('index') }}" class="row g-2 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label small fw-medium text-muted">Search Products</label>
-                <div class="input-group eco-input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" class="form-control" name="q" value="{{ search }}"
-                        placeholder="Search products…">
-                </div>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span class="fw-bold text-warning"><i class="bi bi-tags-fill me-2"></i>Active Digital Marketing Coupons:</span>
+            <div class="d-flex flex-wrap gap-2">
+                {% for cp in coupons %}
+                <span class="badge bg-secondary p-2 border border-warning">
+                    <i class="bi bi-ticket-fill text-warning me-1"></i> <strong>{{ cp.code }}</strong> – {{ cp.description }}
+                </span>
+                {% endfor %}
             </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-medium text-muted">Category</label>
-                <select class="form-select" name="cat">
-                    <option value="">All Categories</option>
-                    {% for cat in categories %}
-                    <option value="{{ cat.category_id }}" {{ 'selected' if selected_cat==cat.category_id|string else ''
-                        }}>
-                        {{ cat.category_name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-medium text-muted">Carbon Level</label>
-                <select class="form-select" name="carbon">
-                    <option value="">All Carbon Levels</option>
-                    <option value="low" {{ 'selected' if carbon_filter=='low' }}>🟢 Low</option>
-                    <option value="medium" {{ 'selected' if carbon_filter=='medium' }}>🟡 Medium</option>
-                    <option value="high" {{ 'selected' if carbon_filter=='high' }}>🔴 High</option>
-                </select>
-            </div>
-            <div class="col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-eco w-100">Filter</button>
-                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-lg"></i>
-                </a>
-            </div>
-        </form>
+        </div>
     </div>
 </section>
 
-<!-- ===== PRODUCT GRID ===== -->
-<section class="py-5">
+<!-- ========== PRODUCT SECTION ========== -->
+<section class="py-5" id="products">
     <div class="container">
-        {% if products %}
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h5 class="fw-semibold mb-0">
-                <i class="bi bi-grid me-2"></i>{{ products|length }} Products Found
-            </h5>
+        <!-- Search & Filter Bar -->
+        <div class="row align-items-center mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <h3 class="fw-bold text-dark mb-1"><i class="bi bi-grid-fill text-danger me-2"></i>Superstore Catalog</h3>
+                <p class="text-muted small mb-0">Select from our daily fresh stock & discounted bundles</p>
+            </div>
+            <div class="col-md-6">
+                <form method="GET" action="{{ url_for('index') }}" class="d-flex gap-2">
+                    <input type="text" name="q" value="{{ search_q }}" class="form-control form-control-lg shadow-sm" placeholder="Search groceries, milk, rice, snacks...">
+                    <button type="submit" class="btn btn-vmart px-4"><i class="bi bi-search"></i></button>
+                    {% if search_q or selected_cat %}
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-lg"><i class="bi bi-x-lg"></i></a>
+                    {% endif %}
+                </form>
+            </div>
         </div>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-4">
+
+        <!-- Categories Filter -->
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <a href="{{ url_for('index') }}" class="btn btn-sm {% if not selected_cat %}btn-danger fw-bold{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+                All Products
+            </a>
+            {% for cat in categories %}
+            <a href="{{ url_for('index', category=cat.category_id) }}" class="btn btn-sm {% if selected_cat == cat.category_id %}btn-danger fw-bold{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+                <i class="bi {{ cat.icon_class }} me-1"></i>{{ cat.category_name }}
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- Products Grid -->
+        <div class="row g-4">
             {% for p in products %}
-            {% set level = p.carbon_level or 'medium' %}
-            {% if level == 'low' %}
-            {% set badge_class = 'success' %}
-            {% set badge_icon = 'bi-check-circle-fill' %}
-            {% set badge_text = 'Low Carbon' %}
-            {% elif level == 'high' %}
-            {% set badge_class = 'danger' %}
-            {% set badge_icon = 'bi-exclamation-triangle-fill' %}
-            {% set badge_text = 'High Carbon' %}
-            {% else %}
-            {% set badge_class = 'warning' %}
-            {% set badge_icon = 'bi-dash-circle-fill' %}
-            {% set badge_text = 'Medium Carbon' %}
-            {% endif %}
-            <div class="col">
-                <div class="card product-card h-100 shadow-sm">
-                    <!-- Carbon badge -->
-                    <div class="product-carbon-badge badge bg-{{ badge_class }}">
-                        <i class="bi {{ badge_icon }} me-1"></i>{{ badge_text }}
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="product-card h-100 d-flex flex-column p-3">
+                    <!-- Deal Tag Badge -->
+                    <span class="product-deal-badge bg-danger text-white">
+                        {{ p.deal_tag }}
+                    </span>
+
+                    <!-- Product Image Placeholder Icon -->
+                    <div class="py-4 text-center bg-light rounded-3 mb-3">
+                        <i class="bi bi-bag-heart-fill text-danger display-4 opacity-75"></i>
                     </div>
-                    <!-- Product body -->
-                    <div class="card-body d-flex flex-column p-3">
-                        <div class="product-category-tag mb-2">
-                            <span class="badge text-bg-secondary rounded-pill">
-                                {{ p.category_name or 'General' }}
-                            </span>
-                        </div>
-                        <h6 class="card-title fw-bold mb-1">{{ p.name }}</h6>
-                        <small class="text-muted mb-2 d-block">
-                            <i class="bi bi-person-badge me-1"></i>Sold by: {{ p.merchant_name or 'Eco Shop Official' }}
-                        </small>
-                        <p class="card-text text-muted small flex-grow-1 mb-2">
-                            {{ p.description[:90] }}{% if p.description|length > 90 %}…{% endif %}
-                        </p>
-                        <div class="carbon-meter mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <small class="text-muted"><i class="bi bi-cloud-haze2 me-1"></i>Carbon / unit</small>
-                                <small class="fw-semibold text-{{ badge_class }}">
-                                    {{ "%.2f"|format(p.base_carbon_emission|float) }} kg CO₂e
-                                </small>
-                            </div>
-                            <div class="progress" style="height: 5px;">
-                                {% set pct = [((p.base_carbon_emission|float) / 400 * 100), 100]|min %}
-                                <div class="progress-bar bg-{{ badge_class }}" style="width: {{ pct }}%"></div>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="product-price">₹{{ "%.2f"|format(p.price|float) }}</span>
-                            {% if session.user_id %}
-                            <form method="POST" action="{{ url_for('add_to_cart', product_id=p.product_id) }}"
-                                class="d-flex gap-1">
-                                <input type="hidden" name="quantity" value="1">
-                                <button type="submit" class="btn btn-eco btn-sm px-3" {{ 'disabled' if p.stock==0 }}>
-                                    {% if p.stock == 0 %}
-                                    <i class="bi bi-x-circle me-1"></i>Out of Stock
-                                    {% else %}
-                                    <i class="bi bi-cart-plus me-1"></i>Add
-                                    {% endif %}
-                                </button>
-                            </form>
-                            {% else %}
-                            <a href="{{ url_for('login') }}" class="btn btn-outline-success btn-sm">
-                                Login to Buy
-                            </a>
-                            {% endif %}
-                        </div>
-                        {% if p.stock <= 5 and p.stock> 0 %}
-                            <small class="text-danger mt-2"><i class="bi bi-exclamation-circle me-1"></i>Only {{ p.stock
-                                }} left!</small>
-                            {% endif %}
+
+                    <!-- Category & Title -->
+                    <span class="badge bg-light text-secondary text-start mb-1 w-auto align-self-start">{{ p.category_name }}</span>
+                    <h6 class="fw-bold text-dark mb-1 text-truncate" title="{{ p.name }}">{{ p.name }}</h6>
+                    <p class="text-muted small mb-2 text-truncate" title="{{ p.description }}">{{ p.description }}</p>
+
+                    <!-- Rating -->
+                    <div class="small text-warning mb-2">
+                        <i class="bi bi-star-fill"></i> {{ p.rating }} <span class="text-muted">(120+ reviews)</span>
                     </div>
+
+                    <!-- Price & MRP -->
+                    <div class="mt-auto pt-2 border-top d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="mrp-strike me-1">${{ "%.2f"|format(p.mrp) }}</span>
+                            <span class="vmart-price">${{ "%.2f"|format(p.price) }}</span>
+                        </div>
+                        <span class="discount-badge">-{{ p.discount_pct }}%</span>
+                    </div>
+
+                    <!-- Action Button -->
+                    {% if session.user_id %}
+                    <form method="POST" action="{{ url_for('add_to_cart', product_id=p.product_id) }}" class="mt-3">
+                        <button type="submit" class="btn btn-vmart btn-sm w-100 py-2">
+                            <i class="bi bi-basket-fill me-1"></i>Add to Basket
+                        </button>
+                    </form>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-vmart-outline btn-sm w-100 mt-3 py-2">
+                        Login to Buy
+                    </a>
+                    {% endif %}
                 </div>
+            </div>
+            {% else %}
+            <div class="col-12 text-center py-5">
+                <i class="bi bi-search text-muted display-1 mb-3"></i>
+                <h5>No supermarket products found</h5>
+                <p class="text-muted">Try resetting your search or filter options.</p>
+                <a href="{{ url_for('index') }}" class="btn btn-vmart px-4">View All Products</a>
             </div>
             {% endfor %}
         </div>
-        {% else %}
-        <div class="text-center py-5">
-            <i class="bi bi-search display-1 text-muted"></i>
-            <h4 class="mt-3 text-muted">No products found</h4>
-            <a href="{{ url_for('index') }}" class="btn btn-eco mt-3">Clear Filters</a>
-        </div>
-        {% endif %}
     </div>
 </section>
-
 {% endblock %}
